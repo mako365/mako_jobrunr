@@ -39,7 +39,6 @@ public class JobZooKeeper implements Runnable {
         this.masterTasks = asList(
                 new ProcessRecurringJobsTask(this, backgroundJobServer),
                 new ProcessScheduledJobsTask(this, backgroundJobServer),
-                new ProcessOrphanedJobsTask(this, backgroundJobServer),
                 new DeleteSucceededJobsTask(this, backgroundJobServer),
                 new DeleteDeletedJobsPermanentlyTask(this, backgroundJobServer)
         );
