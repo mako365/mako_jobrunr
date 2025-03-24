@@ -136,11 +136,11 @@ task npmRunBuild() {
         println "JobRunr Frontend Build started"
         exec {
             workingDir = new File(projectDir, 'src/main/resources/org/jobrunr/dashboard/frontend')
-            commandLine 'sh', '-c', 'npm install'
+            commandLine 'sh', '-c', 'yarn install'
         }
         exec {
             workingDir = new File(projectDir, 'src/main/resources/org/jobrunr/dashboard/frontend')
-            commandLine 'sh', '-c', 'npm run build'
+            commandLine 'sh', '-c', 'yarn run build'
         }
         println "JobRunr Frontend Build succeeded"
     }
