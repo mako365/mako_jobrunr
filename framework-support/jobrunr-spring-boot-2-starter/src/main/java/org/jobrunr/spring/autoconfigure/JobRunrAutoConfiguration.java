@@ -14,16 +14,25 @@ import org.jobrunr.scheduling.RecurringJobPostProcessor;
 import org.jobrunr.server.BackgroundJobServer;
 import org.jobrunr.server.BackgroundJobServerConfiguration;
 import org.jobrunr.server.JobActivator;
+import org.jobrunr.server.JobActivatorShutdownException;
+import org.jobrunr.server.configuration.BackgroundJobServerThreadType;
+import org.jobrunr.server.configuration.BackgroundJobServerWorkerPolicy;
+import org.jobrunr.server.configuration.DefaultBackgroundJobServerWorkerPolicy;
 import org.jobrunr.spring.autoconfigure.health.JobRunrHealthIndicator;
 import org.jobrunr.storage.StorageProvider;
 import org.jobrunr.utils.mapper.JsonMapper;
 import org.jobrunr.utils.mapper.gson.GsonJsonMapper;
 import org.jobrunr.utils.mapper.jackson.JacksonJsonMapper;
 import org.jobrunr.utils.mapper.jsonb.JsonbJsonMapper;
+import org.springframework.beans.factory.BeanCreationNotAllowedException;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.actuate.autoconfigure.health.ConditionalOnEnabledHealthIndicator;
 import org.springframework.boot.actuate.health.HealthIndicator;
-import org.springframework.boot.autoconfigure.condition.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnResource;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.PropertyMapper;
 import org.springframework.context.ApplicationContext;
@@ -31,8 +40,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.Optional;
+
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
+import static java.util.Optional.ofNullable;
 import static org.jobrunr.dashboard.JobRunrDashboardWebServerConfiguration.usingStandardDashboardConfiguration;
 import static org.jobrunr.server.BackgroundJobServerConfiguration.usingStandardBackgroundJobServerConfiguration;
 import static org.jobrunr.utils.reflection.ReflectionUtils.newInstance;
@@ -45,6 +57,11 @@ import static org.jobrunr.utils.reflection.ReflectionUtils.newInstance;
 @EnableConfigurationProperties(JobRunrProperties.class)
 @ComponentScan(basePackages = {"org.jobrunr.scheduling"})
 public class JobRunrAutoConfiguration {
+
+    @Bean
+    public JobRunrStarter jobRunrStarter(Optional<BackgroundJobServer> backgroundJobServer, Optional<JobRunrDashboardWebServer> webServer) {
+        return new JobRunrStarter(backgroundJobServer, webServer);
+    }
 
     @Bean
     @ConditionalOnMissingBean
@@ -61,44 +78,53 @@ public class JobRunrAutoConfiguration {
         return new JobRequestScheduler(storageProvider, emptyList());
     }
 
-    @Bean(destroyMethod = "stop")
+    @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "org.jobrunr.background-job-server", name = "enabled", havingValue = "true")
     public BackgroundJobServer backgroundJobServer(StorageProvider storageProvider, JsonMapper jobRunrJsonMapper, JobActivator jobActivator, BackgroundJobServerConfiguration backgroundJobServerConfiguration, JobRunrProperties properties) {
         final BackgroundJobServer backgroundJobServer = new BackgroundJobServer(storageProvider, jobRunrJsonMapper, jobActivator, backgroundJobServerConfiguration);
         backgroundJobServer.setJobFilters(singletonList(new RetryFilter(properties.getJobs().getDefaultNumberOfRetries(), properties.getJobs().getRetryBackOffTimeSeed())));
-        backgroundJobServer.start();
         return backgroundJobServer;
     }
 
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "org.jobrunr.background-job-server", name = "enabled", havingValue = "true")
-    public BackgroundJobServerConfiguration backgroundJobServerConfiguration(JobRunrProperties properties) {
+    public BackgroundJobServerWorkerPolicy backgroundJobServerWorkerPolicy(JobRunrProperties properties) {
+        JobRunrProperties.BackgroundJobServer backgroundJobServerProperties = properties.getBackgroundJobServer();
+        BackgroundJobServerThreadType threadType = ofNullable(backgroundJobServerProperties.getThreadType()).orElse(BackgroundJobServerThreadType.getDefaultThreadType());
+        int workerCount = ofNullable(backgroundJobServerProperties.getWorkerCount()).orElse(threadType.getDefaultWorkerCount());
+        return new DefaultBackgroundJobServerWorkerPolicy(workerCount, threadType);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "org.jobrunr.background-job-server", name = "enabled", havingValue = "true")
+    public BackgroundJobServerConfiguration backgroundJobServerConfiguration(JobRunrProperties properties, BackgroundJobServerWorkerPolicy backgroundJobServerWorkerPolicy) {
         PropertyMapper map = PropertyMapper.get();
         BackgroundJobServerConfiguration backgroundJobServerConfiguration = usingStandardBackgroundJobServerConfiguration();
         JobRunrProperties.BackgroundJobServer backgroundJobServerProperties = properties.getBackgroundJobServer();
 
+        backgroundJobServerConfiguration.andBackgroundJobServerWorkerPolicy(backgroundJobServerWorkerPolicy);
+
         map.from(backgroundJobServerProperties::getName).whenNonNull().to(backgroundJobServerConfiguration::andName);
-        map.from(backgroundJobServerProperties::getWorkerCount).whenNonNull().to(backgroundJobServerConfiguration::andWorkerCount);
         map.from(backgroundJobServerProperties::getPollIntervalInSeconds).to(backgroundJobServerConfiguration::andPollIntervalInSeconds);
-        map.from(backgroundJobServerProperties::getPollIntervalToTimeoutMultiplier).to(backgroundJobServerConfiguration::andPollIntervalToTimeoutMultiplier);
+        map.from(backgroundJobServerProperties::getServerTimeoutPollIntervalMultiplicand).to(backgroundJobServerConfiguration::andServerTimeoutPollIntervalMultiplicand);
         map.from(backgroundJobServerProperties::getDeleteSucceededJobsAfter).to(backgroundJobServerConfiguration::andDeleteSucceededJobsAfter);
         map.from(backgroundJobServerProperties::getPermanentlyDeleteDeletedJobsAfter).to(backgroundJobServerConfiguration::andPermanentlyDeleteDeletedJobsAfter);
         map.from(backgroundJobServerProperties::getScheduledJobsRequestSize).to(backgroundJobServerConfiguration::andScheduledJobsRequestSize);
         map.from(backgroundJobServerProperties::getOrphanedJobsRequestSize).to(backgroundJobServerConfiguration::andOrphanedJobsRequestSize);
         map.from(backgroundJobServerProperties::getSucceededJobsRequestSize).to(backgroundJobServerConfiguration::andSucceededJobsRequestSize);
+        map.from(backgroundJobServerProperties::getInterruptJobsAwaitDurationOnStop).to(backgroundJobServerConfiguration::andInterruptJobsAwaitDurationOnStopBackgroundJobServer);
 
         return backgroundJobServerConfiguration;
     }
 
-    @Bean(destroyMethod = "stop")
+    @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "org.jobrunr.dashboard", name = "enabled", havingValue = "true")
     public JobRunrDashboardWebServer dashboardWebServer(StorageProvider storageProvider, JsonMapper jobRunrJsonMapper, JobRunrDashboardWebServerConfiguration dashboardWebServerConfiguration) {
-        JobRunrDashboardWebServer dashboardWebServer = new JobRunrDashboardWebServer(storageProvider, jobRunrJsonMapper, dashboardWebServerConfiguration);
-        dashboardWebServer.start();
-        return dashboardWebServer;
+        return new JobRunrDashboardWebServer(storageProvider, jobRunrJsonMapper, dashboardWebServerConfiguration);
     }
 
     @Bean
@@ -114,7 +140,16 @@ public class JobRunrAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public JobActivator jobActivator(ApplicationContext applicationContext) {
-        return applicationContext::getBean;
+        return new JobActivator() {
+            @Override
+            public <T> T activateJob(Class<T> type) throws JobActivatorShutdownException {
+                try {
+                    return applicationContext.getBean(type);
+                } catch (BeanCreationNotAllowedException e) {
+                    throw new JobActivatorShutdownException("Spring IoC container is shutting down", e);
+                }
+            }
+        };
     }
 
     @Bean

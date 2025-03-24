@@ -27,7 +27,9 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import static java.time.temporal.ChronoUnit.MINUTES;
-import static org.jobrunr.jobs.JobDetailsTestBuilder.*;
+import static org.jobrunr.jobs.JobDetailsTestBuilder.classThatDoesNotExistJobDetails;
+import static org.jobrunr.jobs.JobDetailsTestBuilder.jobParameterThatDoesNotExistJobDetails;
+import static org.jobrunr.jobs.JobDetailsTestBuilder.methodThatDoesNotExistJobDetails;
 import static org.jobrunr.jobs.JobTestBuilder.aJob;
 import static org.jobrunr.utils.diagnostics.DiagnosticsBuilder.diagnostics;
 
@@ -40,9 +42,9 @@ public class FrontEndDevelopment {
         StorageProvider storageProvider = inMemoryStorageProvider();
 
         //StubDataProvider.using(storageProvider)
-                //.addALotOfEnqueuedJobsThatTakeSomeTime()
-                //.addALotOfEnqueuedJobsThatTakeSomeTime()
-                //.addSomeRecurringJobs();
+        //.addALotOfEnqueuedJobsThatTakeSomeTime()
+        //.addALotOfEnqueuedJobsThatTakeSomeTime()
+        //.addSomeRecurringJobs();
 
         storageProvider.save(aJob().withJobDetails(classThatDoesNotExistJobDetails()).withState(new ScheduledState(Instant.now().plus(2, MINUTES))).build());
         storageProvider.save(aJob().withJobDetails(methodThatDoesNotExistJobDetails()).withState(new ScheduledState(Instant.now().plus(2, MINUTES))).build());
@@ -50,6 +52,7 @@ public class FrontEndDevelopment {
 
         JobRunr
                 .configure()
+                .useJsonMapper(new JacksonJsonMapper())
                 .useStorageProvider(storageProvider)
                 .useDashboardIf(dashboardIsEnabled(args), 8000)
                 .useBackgroundJobServer()
@@ -58,7 +61,7 @@ public class FrontEndDevelopment {
         BackgroundJob.<TestService>scheduleRecurrently("Github-75", Cron.daily(18, 4),
                 x -> x.doWorkThatTakesLong(JobContext.Null));
 
-        BackgroundJob.<TestService>scheduleRecurrently(Duration.ofMinutes(1), x -> x.doWorkThatTakesLong(JobContext.Null));
+        BackgroundJob.<TestService>scheduleRecurrently(Duration.ofSeconds(5), TestService::doWork);
 
         DashboardNotificationManager dashboardNotificationManager = new DashboardNotificationManager(JobRunr.getBackgroundJobServer().getId(), storageProvider);
         new Timer().schedule(new TimerTask() {
@@ -89,7 +92,7 @@ public class FrontEndDevelopment {
         return false;
     }
 
-    private static class ExceptionWithDiagnostics implements SevereJobRunrException.DiagnosticsAware {
+    private static class ExceptionWithDiagnostics extends Exception implements SevereJobRunrException.DiagnosticsAware {
 
         @Override
         public DiagnosticsBuilder getDiagnosticsInfo() {

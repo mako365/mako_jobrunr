@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,11 +34,11 @@ public class ServerZooKeeper implements Runnable {
         this.backgroundJobServer = backgroundJobServer;
         this.storageProvider = backgroundJobServer.getStorageProvider();
         this.dashboardNotificationManager = backgroundJobServer.getDashboardNotificationManager();
-        this.timeoutDuration = Duration.ofSeconds(backgroundJobServer.getConfiguration().getPollIntervalInSeconds()).multipliedBy(backgroundJobServer.getConfiguration().getPollIntervalToTimeoutMultiplier());
+        this.timeoutDuration = backgroundJobServer.getConfiguration().getPollInterval().multipliedBy(backgroundJobServer.getConfiguration().getServerTimeoutPollIntervalMultiplicand());
         this.restartAttempts = new AtomicInteger();
         this.lastSignalAlive = Instant.now();
         this.lastServerTimeoutCheck = Instant.now();
-        LOGGER.debug(systemSupportsSleepDetection()
+        LOGGER.trace(systemSupportsSleepDetection()
                 ? "JobRunr can detect desktop sleeping."
                 : "JobRunr can not detect desktop sleeping.");
     }
@@ -140,9 +139,7 @@ public class ServerZooKeeper implements Runnable {
     }
 
     private static Instant min(Instant instant1, Instant instant2) {
-        Instant[] instants = new Instant[]{instant1, instant2};
-        Arrays.sort(instants);
-        return instants[0];
+        return instant1.isBefore(instant2) ? instant1 : instant2;
     }
 
     private Optional<Integer> cpuAllocationIrregularity(Instant lastSignalAlive, Instant lastHeartbeat) {
@@ -154,7 +151,7 @@ public class ServerZooKeeper implements Runnable {
         final int amount3OfSec = (int) (now.getEpochSecond() - lastHeartbeat.getEpochSecond());
 
         final int max = Math.max(amount1OfSec, Math.max(amount2OfSec, amount3OfSec));
-        if (max > backgroundJobServer.getConfiguration().getPollIntervalInSeconds() * 2L) {
+        if (max > backgroundJobServer.getConfiguration().getPollInterval().getSeconds() * 2L) {
             return Optional.of(max);
         }
         return Optional.empty();
