@@ -5,7 +5,8 @@
 The ultimate library to perform background processing on the JVM.<br/>
 Dead simple API. Extensible. Reliable. <br/>
 Distributed and backed by persistent storage. <br/>
-Open and free for commercial use.
+Open and free for commercial use.  <br/>
+Recommended and <a href="https://www.thoughtworks.com/radar/languages-and-frameworks/jobrunr">loved by ThoughtWorks</a>.
 </p>  
 <br/>
 
@@ -14,13 +15,14 @@ Open and free for commercial use.
 <p align="center">
     <a href="https://search.maven.org/artifact/org.jobrunr/jobrunr"><img src="https://maven-badges.herokuapp.com/maven-central/org.jobrunr/jobrunr/badge.svg"></a>&nbsp;
     <img alt="Drone Build" src="https://build.jobrunr.io/api/badges/jobrunr/jobrunr/status.svg" />&nbsp;
+    <a href="https://www.bestpractices.dev/projects/7376"><img alt="OpenSSF Best Practices" src="https://www.bestpractices.dev/projects/7376/badge"/></a>&nbsp;
     <img alt="LGPLv3 Licence" src="https://img.shields.io/badge/license-LGPLv3-green.svg" /><br/>
     <a href="https://sonarcloud.io/dashboard?id=jobrunr_jobrunr"><img alt="Quality Scale" src="https://sonarcloud.io/api/project_badges/measure?project=jobrunr_jobrunr&metric=sqale_rating" /></a>&nbsp;
-    <a href="https://sonarcloud.io/dashboard?id=jobrunr_jobrunr"><img alt="Reliability Rating" src="https://sonarcloud.io/api/project_badges/measure?project=jobrunr_jobrunr&metric=reliability_rating" /></a>&nbsp;
-    <a href="https://sonarcloud.io/dashboard?id=jobrunr_jobrunr"><img alt="Security Rating" src="https://sonarcloud.io/api/project_badges/measure?project=jobrunr_jobrunr&metric=security_rating" /></a><br/>
-    <a href="https://sonarcloud.io/dashboard?id=jobrunr_jobrunr"><img alt="Coverage" src="https://sonarcloud.io/api/project_badges/measure?project=jobrunr_jobrunr&metric=coverage" /></a>&nbsp;
     <a href="https://sonarcloud.io/dashboard?id=jobrunr_jobrunr"><img alt="Vulnerabilities" src="https://sonarcloud.io/api/project_badges/measure?project=jobrunr_jobrunr&metric=vulnerabilities" /></a>&nbsp;
-    <a href="https://sonarcloud.io/dashboard?id=jobrunr_jobrunr"><img alt="Bugs" src="https://sonarcloud.io/api/project_badges/measure?project=jobrunr_jobrunr&metric=bugs" /></a><br/>
+    <a href="https://sonarcloud.io/dashboard?id=jobrunr_jobrunr"><img alt="Security Rating" src="https://sonarcloud.io/api/project_badges/measure?project=jobrunr_jobrunr&metric=security_rating" /></a><br/>
+    <!--a href="https://sonarcloud.io/dashboard?id=jobrunr_jobrunr"><img alt="Coverage" src="https://sonarcloud.io/api/project_badges/measure?project=jobrunr_jobrunr&metric=coverage" /></a>&nbsp;
+    <a href="https://sonarcloud.io/dashboard?id=jobrunr_jobrunr"><img alt="Reliability Rating" src="https://sonarcloud.io/api/project_badges/measure?project=jobrunr_jobrunr&metric=reliability_rating" /></a>&nbsp;
+    <a href="https://sonarcloud.io/dashboard?id=jobrunr_jobrunr"><img alt="Bugs" src="https://sonarcloud.io/api/project_badges/measure?project=jobrunr_jobrunr&metric=bugs" /></a--><br/>
     <a href="https://twitter.com/intent/tweet?text=Try%20JobRunr%20for%20easy%20distributed%20background%20job%20processing%20on%20the%20JVM%21%20&url=https://www.jobrunr.io&via=jobrunr&hashtags=java,scheduling,processing,distributed,developers"><img alt="Tweet about us!" src="https://www.jobrunr.io/tweet-btn.svg?v2" /></a>&nbsp;
     <a href="https://github.com/jobrunr/jobrunr/stargazers"><img alt="Star us!" src="https://www.jobrunr.io/github-star-btn.svg?v2" /></a>
     <a href="https://github.com/jobrunr/jobrunr/discussions"><img src="https://img.shields.io/badge/chat-Github%20discussions-green" alt="Join the chat at Gitter" /></a><br />
@@ -45,7 +47,7 @@ View more feedback on [jobrunr.io](https://www.jobrunr.io/en/#why-jobrunr).
 ## Features
 - Simple: just use Java 8 lambda's to create a background job.
 - Distributed & cluster-friendly: guarantees execution by single scheduler instance using optimistic locking.
-- Persistent jobs: using either a RDMBS (four tables and a view) or a noSQL data store.
+- Persistent jobs: using either a RDBMS (four tables and a view) or a NoSQL data store.
 - Embeddable: built to be embedded in existing applications.
 - Minimal dependencies: ([ASM](https://asm.ow2.io/), slf4j and either [jackson](https://github.com/FasterXML/jackson) and jackson-datatype-jsr310, [gson](https://github.com/google/gson) or a JSON-B compliant library).
 

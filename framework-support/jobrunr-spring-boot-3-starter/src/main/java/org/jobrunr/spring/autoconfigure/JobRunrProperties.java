@@ -2,6 +2,7 @@ package org.jobrunr.spring.autoconfigure;
 
 import org.jobrunr.jobs.details.CachingJobDetailsGenerator;
 import org.jobrunr.jobs.filters.RetryFilter;
+import org.jobrunr.server.configuration.BackgroundJobServerThreadType;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.convert.DurationUnit;
 
@@ -242,22 +243,33 @@ public class JobRunrProperties {
         private Integer workerCount;
 
         /**
+         * Sets the Thread Type for the BackgroundJobServer.
+         * By default, this will be determined by the Java version (VirtualThreads as of Java 21).
+         */
+        private BackgroundJobServerThreadType threadType;
+
+        /**
          * Set the pollIntervalInSeconds for the BackgroundJobServer to see whether new jobs need to be processed
          */
         private Integer pollIntervalInSeconds = 15;
 
         /**
-         * Sets the maximum number of jobs to update from scheduled to enqueued state per polling interval.
+         * Set the pollInterval multiplicand used to determine when a BackgroundJobServer has timed out and processing jobs are orphaned.
+         */
+        private Integer serverTimeoutPollIntervalMultiplicand = 4;
+
+        /**
+         * Sets the maximum number of jobs to update from scheduled to enqueued state per database round-trip.
          */
         private Integer scheduledJobsRequestSize = 1000;
 
         /**
-         * Sets the query size for misfired jobs per polling interval (to retry them).
+         * Sets the query size for misfired jobs per database round-trip (to retry them).
          */
         private Integer orphanedJobsRequestSize = 1000;
 
         /**
-         * Sets the maximum number of jobs to update from succeeded to deleted state per polling interval.
+         * Sets the maximum number of jobs to update from succeeded to deleted state per database round-trip.
          */
         private Integer succeededJobsRequestSize = 1000;
 
@@ -274,6 +286,13 @@ public class JobRunrProperties {
          */
         @DurationUnit(ChronoUnit.HOURS)
         private Duration permanentlyDeleteDeletedJobsAfter = Duration.ofHours(72);
+
+        /**
+         * Sets the duration to wait before interrupting threads/jobs when the server is stopped. If a duration suffix
+         * is not specified, seconds will be used.
+         */
+        @DurationUnit(ChronoUnit.SECONDS)
+        private Duration interruptJobsAwaitDurationOnStop = Duration.ofSeconds(10);
 
         /**
          * Configures MicroMeter metrics related to the BackgroundJobServer
@@ -304,12 +323,28 @@ public class JobRunrProperties {
             this.workerCount = workerCount;
         }
 
+        public BackgroundJobServerThreadType getThreadType() {
+            return threadType;
+        }
+
+        public void setThreadType(BackgroundJobServerThreadType threadType) {
+            this.threadType = threadType;
+        }
+
         public Integer getPollIntervalInSeconds() {
             return pollIntervalInSeconds;
         }
 
         public void setPollIntervalInSeconds(Integer pollIntervalInSeconds) {
             this.pollIntervalInSeconds = pollIntervalInSeconds;
+        }
+
+        public Integer getServerTimeoutPollIntervalMultiplicand() {
+            return serverTimeoutPollIntervalMultiplicand;
+        }
+
+        public void setServerTimeoutPollIntervalMultiplicand(Integer serverTimeoutPollIntervalMultiplicand) {
+            this.serverTimeoutPollIntervalMultiplicand = serverTimeoutPollIntervalMultiplicand;
         }
 
         public Integer getScheduledJobsRequestSize() {
@@ -353,6 +388,14 @@ public class JobRunrProperties {
 
         public void setPermanentlyDeleteDeletedJobsAfter(Duration permanentlyDeleteDeletedJobsAfter) {
             this.permanentlyDeleteDeletedJobsAfter = permanentlyDeleteDeletedJobsAfter;
+        }
+
+        public Duration getInterruptJobsAwaitDurationOnStop() {
+            return interruptJobsAwaitDurationOnStop;
+        }
+
+        public void setInterruptJobsAwaitDurationOnStop(Duration interruptJobsAwaitDurationOnStop) {
+            this.interruptJobsAwaitDurationOnStop = interruptJobsAwaitDurationOnStop;
         }
 
         public Metrics getMetrics() {

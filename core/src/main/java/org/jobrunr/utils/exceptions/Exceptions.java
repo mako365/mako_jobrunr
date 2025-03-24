@@ -8,7 +8,7 @@ import java.util.function.Supplier;
 public class Exceptions {
 
     public static boolean hasCause(Throwable t, Class<? extends Throwable> exceptionClass) {
-        if (t.getClass().isAssignableFrom(exceptionClass)) return true;
+        if (exceptionClass.isAssignableFrom(t.getClass())) return true;
         if (t.getCause() != null) {
             return hasCause(t.getCause(), exceptionClass);
         }
@@ -76,11 +76,11 @@ public class Exceptions {
         throw new IllegalStateException("Cannot happen");
     }
 
-    public static <E extends RuntimeException> void retryOnException(Runnable runnable, int maxRetries) {
+    public static void retryOnException(Runnable runnable, int maxRetries) {
         retryOnException(runnable, e -> true, maxRetries);
     }
 
-    public static <E extends RuntimeException> void retryOnException(Runnable runnable, int maxRetries, long timeSeed) {
+    public static void retryOnException(Runnable runnable, int maxRetries, long timeSeed) {
         retryOnException(runnable, e -> true, maxRetries, timeSeed);
     }
 

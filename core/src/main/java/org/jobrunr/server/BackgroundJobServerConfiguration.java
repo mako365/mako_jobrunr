@@ -1,6 +1,9 @@
 package org.jobrunr.server;
 
-import org.jobrunr.server.configuration.*;
+import org.jobrunr.server.configuration.BackgroundJobServerWorkerPolicy;
+import org.jobrunr.server.configuration.ConcurrentJobModificationPolicy;
+import org.jobrunr.server.configuration.DefaultBackgroundJobServerWorkerPolicy;
+import org.jobrunr.server.configuration.DefaultConcurrentJobModificationPolicy;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -15,24 +18,25 @@ import static org.jobrunr.utils.StringUtils.isNullOrEmpty;
  */
 public class BackgroundJobServerConfiguration {
 
-    public static final int DEFAULT_POLL_INTERVAL_IN_SECONDS = 15;
-    public static final int DEFAULT_POLL_INTERVAL_TO_TIMEOUT_MULTIPLIER = 4;
+    public static final Duration DEFAULT_POLL_INTERVAL = Duration.ofSeconds(15);
+    public static final int DEFAULT_SERVER_TIMEOUT_POLL_INTERVAL_MULTIPLICAND = 4;
     public static final int DEFAULT_PAGE_REQUEST_SIZE = 1000;
     public static final Duration DEFAULT_DELETE_SUCCEEDED_JOBS_DURATION = Duration.ofHours(36);
     public static final Duration DEFAULT_PERMANENTLY_DELETE_JOBS_DURATION = Duration.ofHours(72);
+    public static final Duration DEFAULT_INTERRUPT_JOBS_AWAIT_DURATION_ON_STOP_BACKGROUND_JOB_SERVER = Duration.ofSeconds(10);
 
-    private int scheduledJobsRequestSize = DEFAULT_PAGE_REQUEST_SIZE;
-    private int orphanedJobsRequestSize = DEFAULT_PAGE_REQUEST_SIZE;
-    private int succeededJobsRequestSize = DEFAULT_PAGE_REQUEST_SIZE;
-    private int pollIntervalInSeconds = DEFAULT_POLL_INTERVAL_IN_SECONDS;
-    private int pollIntervalToTimeoutMultiplier = DEFAULT_POLL_INTERVAL_TO_TIMEOUT_MULTIPLIER;
-    private Boolean updateCheckEnabled = true;
-    private UUID id = UUID.randomUUID();
-    private String name = getHostName();
-    private Duration deleteSucceededJobsAfter = DEFAULT_DELETE_SUCCEEDED_JOBS_DURATION;
-    private Duration permanentlyDeleteDeletedJobsAfter = DEFAULT_PERMANENTLY_DELETE_JOBS_DURATION;
-    private BackgroundJobServerWorkerPolicy backgroundJobServerWorkerPolicy = new DefaultBackgroundJobServerWorkerPolicy();
-    private ConcurrentJobModificationPolicy concurrentJobModificationPolicy = new DefaultConcurrentJobModificationPolicy();
+    int scheduledJobsRequestSize = DEFAULT_PAGE_REQUEST_SIZE;
+    int orphanedJobsRequestSize = DEFAULT_PAGE_REQUEST_SIZE;
+    int succeededJobsRequestSize = DEFAULT_PAGE_REQUEST_SIZE;
+    Duration pollInterval = DEFAULT_POLL_INTERVAL;
+    int serverTimeoutPollIntervalMultiplicand = DEFAULT_SERVER_TIMEOUT_POLL_INTERVAL_MULTIPLICAND;
+    UUID id = UUID.randomUUID();
+    String name = getHostName();
+    Duration deleteSucceededJobsAfter = DEFAULT_DELETE_SUCCEEDED_JOBS_DURATION;
+    Duration permanentlyDeleteDeletedJobsAfter = DEFAULT_PERMANENTLY_DELETE_JOBS_DURATION;
+    Duration interruptJobsAwaitDurationOnStopBackgroundJobServer = DEFAULT_INTERRUPT_JOBS_AWAIT_DURATION_ON_STOP_BACKGROUND_JOB_SERVER;
+    BackgroundJobServerWorkerPolicy backgroundJobServerWorkerPolicy = new DefaultBackgroundJobServerWorkerPolicy();
+    ConcurrentJobModificationPolicy concurrentJobModificationPolicy = new DefaultConcurrentJobModificationPolicy();
 
     private BackgroundJobServerConfiguration() {
 
@@ -79,22 +83,32 @@ public class BackgroundJobServerConfiguration {
      * @return the same configuration instance which provides a fluent api
      */
     public BackgroundJobServerConfiguration andPollIntervalInSeconds(int pollIntervalInSeconds) {
-        if (pollIntervalInSeconds < 5)
-            throw new IllegalArgumentException("The pollIntervalInSeconds can not be smaller than 5 - otherwise it will cause to much load on your SQL/noSQL datastore.");
-        this.pollIntervalInSeconds = pollIntervalInSeconds;
+        return this.andPollInterval(Duration.ofSeconds(pollIntervalInSeconds));
+    }
+
+    /**
+     * Allows to set the pollInterval duration for the BackgroundJobServer
+     *
+     * @param pollInterval the pollInterval duration
+     * @return the same configuration instance which provides a fluent api
+     */
+    public BackgroundJobServerConfiguration andPollInterval(Duration pollInterval) {
+        this.pollInterval = pollInterval;
         return this;
     }
 
     /**
-     * Allows to set the pollIntervalToTimeoutMultiplier for the BackgroundJobServer
+     * Allows to set the pollInterval multiplicand used to determine when a BackgroundJobServer should be seen as timed out (e.g. because it crashed, was stopped, ...)
+     * and jobs being processed should be considered orphaned.
+     * <p>
+     * You can increase this value if you have long stop the world GC cycles or are running on shared hosting and experiencing CPU starvation.
      *
-     * @param timeoutMultiplier the Multiplier to determine the timeout duration from the poll interval
+     * @param multiplicand the pollInterval multiplicand
      * @return the same configuration instance which provides a fluent api
      */
-    public BackgroundJobServerConfiguration andPollIntervalToTimeoutMultiplier(int timeoutMultiplier) {
-        if (timeoutMultiplier < 1)
-            throw new IllegalArgumentException("The timeout multiplier can not be smaller than 1.");
-        this.pollIntervalToTimeoutMultiplier = timeoutMultiplier;
+    public BackgroundJobServerConfiguration andServerTimeoutPollIntervalMultiplicand(int multiplicand) {
+        if (multiplicand < 4) throw new IllegalArgumentException("The smallest possible ServerTimeoutPollIntervalMultiplicand is 4 (4 is also the default)");
+        this.serverTimeoutPollIntervalMultiplicand = multiplicand;
         return this;
     }
 
@@ -105,7 +119,7 @@ public class BackgroundJobServerConfiguration {
      * @return the same configuration instance which provides a fluent api
      */
     public BackgroundJobServerConfiguration andWorkerCount(int workerCount) {
-        this.backgroundJobServerWorkerPolicy = new FixedSizeBackgroundJobServerWorkerPolicy(workerCount);
+        this.backgroundJobServerWorkerPolicy = new DefaultBackgroundJobServerWorkerPolicy(workerCount);
         return this;
     }
 
@@ -122,9 +136,9 @@ public class BackgroundJobServerConfiguration {
     }
 
     /**
-     * Allows to set the maximum number of jobs to update from scheduled to enqueued state per polling interval.
+     * Allows to set the maximum number of jobs to update from scheduled to enqueued state per database round-trip.
      *
-     * @param scheduledJobsRequestSize maximum number of jobs to update per polling interval
+     * @param scheduledJobsRequestSize maximum number of jobs to update per database round-trip
      * @return the same configuration instance which provides a fluent api
      */
     public BackgroundJobServerConfiguration andScheduledJobsRequestSize(int scheduledJobsRequestSize) {
@@ -133,9 +147,9 @@ public class BackgroundJobServerConfiguration {
     }
 
     /**
-     * Allows to set the query size for misfired jobs per polling interval (to retry them).
+     * Allows to set the query size for misfired jobs per database round-trip (to retry them).
      *
-     * @param orphanedJobsRequestSize maximum number of misfired jobs to check per polling interval
+     * @param orphanedJobsRequestSize maximum number of misfired jobs to check per database round-trip
      * @return the same configuration instance which provides a fluent api
      */
     public BackgroundJobServerConfiguration andOrphanedJobsRequestSize(int orphanedJobsRequestSize) {
@@ -144,9 +158,9 @@ public class BackgroundJobServerConfiguration {
     }
 
     /**
-     * Allows to set the maximum number of jobs to update from succeeded to deleted state per polling interval.
+     * Allows to set the maximum number of jobs to update from succeeded to deleted state per database round-trip.
      *
-     * @param succeededJobsRequestSize maximum number of jobs to update per polling interval
+     * @param succeededJobsRequestSize maximum number of jobs to update per database round-trip
      * @return the same configuration instance which provides a fluent api
      */
     public BackgroundJobServerConfiguration andSucceededJobsRequestSize(int succeededJobsRequestSize) {
@@ -177,6 +191,17 @@ public class BackgroundJobServerConfiguration {
     }
 
     /**
+     * Allows to set the duration to wait before interrupting jobs/threads when the {@link BackgroundJobServer} is stopped
+     *
+     * @param duration the duration to wait before interrupting jobs/threads when the {@link BackgroundJobServer} is stopped
+     * @return the same configuration instance which provides a fluent api
+     */
+    public BackgroundJobServerConfiguration andInterruptJobsAwaitDurationOnStopBackgroundJobServer(Duration duration) {
+        this.interruptJobsAwaitDurationOnStopBackgroundJobServer = duration;
+        return this;
+    }
+
+    /**
      * Allows to set the ConcurrentJobModificationPolicy for the BackgroundJobServer. The ConcurrentJobModificationPolicy will determine
      * how the BackgroundJobServer will react to concurrent modifications the jobs.
      * <p>
@@ -190,57 +215,6 @@ public class BackgroundJobServerConfiguration {
         return this;
     }
 
-    public UUID getId() {
-        return id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public int getScheduledJobsRequestSize() {
-        return scheduledJobsRequestSize;
-    }
-
-    public int getOrphanedJobsRequestSize() {
-        return orphanedJobsRequestSize;
-    }
-
-    public int getSucceededJobsRequestSize() {
-        return succeededJobsRequestSize;
-    }
-
-    public int getPollIntervalInSeconds() {
-        return pollIntervalInSeconds;
-    }
-
-    public int getPollIntervalToTimeoutMultiplier() {
-        return pollIntervalToTimeoutMultiplier;
-    }
-
-    public Boolean getUpdateCheckEnabled() {
-        return updateCheckEnabled;
-    }
-
-    public void setUpdateCheckEnabled(Boolean updateCheckEnabled) {
-        this.updateCheckEnabled = updateCheckEnabled;
-    }
-
-    public Duration getDeleteSucceededJobsAfter() {
-        return deleteSucceededJobsAfter;
-    }
-
-    public Duration getPermanentlyDeleteDeletedJobsAfter() {
-        return permanentlyDeleteDeletedJobsAfter;
-    }
-
-    public BackgroundJobServerWorkerPolicy getBackgroundJobServerWorkerPolicy() {
-        return backgroundJobServerWorkerPolicy;
-    }
-
-    public ConcurrentJobModificationPolicy getConcurrentJobModificationPolicy() {
-        return concurrentJobModificationPolicy;
-    }
 
     private static String getHostName() {
         try {

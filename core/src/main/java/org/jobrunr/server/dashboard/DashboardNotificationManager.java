@@ -1,7 +1,13 @@
 package org.jobrunr.server.dashboard;
 
-import org.jobrunr.server.dashboard.mappers.*;
+import org.jobrunr.server.dashboard.mappers.CpuAllocationIrregularityNotificationMapper;
+import org.jobrunr.server.dashboard.mappers.DashboardNotificationMapper;
+import org.jobrunr.server.dashboard.mappers.PollIntervalInSecondsTimeBoxIsTooSmallNotificationMapper;
+import org.jobrunr.server.dashboard.mappers.SevereJobRunrExceptionNotificationMapper;
+import org.jobrunr.storage.JobRunrMetadata;
 import org.jobrunr.storage.StorageProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -12,6 +18,8 @@ import static org.jobrunr.utils.reflection.ReflectionUtils.newInstance;
 
 public class DashboardNotificationManager {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(DashboardNotificationManager.class);
+
     private final StorageProvider storageProvider;
     private final Set<DashboardNotificationMapper<?>> notificationMappers;
 
@@ -20,8 +28,7 @@ public class DashboardNotificationManager {
         this.notificationMappers = new HashSet<>(asList(
                 new SevereJobRunrExceptionNotificationMapper(backgroundJobServerId, storageProvider),
                 new CpuAllocationIrregularityNotificationMapper(backgroundJobServerId),
-                new PollIntervalInSecondsTimeBoxIsTooSmallNotificationMapper(backgroundJobServerId),
-                new NewJobRunrVersionNotificationMapper()
+                new PollIntervalInSecondsTimeBoxIsTooSmallNotificationMapper(backgroundJobServerId)
         ));
     }
 
@@ -35,7 +42,7 @@ public class DashboardNotificationManager {
         notificationMappers.stream()
                 .filter(notificationMapper -> notificationMapper.supports(e))
                 .map(notificationMapper -> notificationMapper.map(e))
-                .forEach(storageProvider::saveMetadata);
+                .forEach(this::saveDashboardNotificationAsMetadata);
     }
 
     public void deleteNotification(Class<? extends DashboardNotification> notificationToDelete) {
@@ -49,5 +56,13 @@ public class DashboardNotificationManager {
                 .map(metadata -> newInstance(notificationClass, metadata))
                 .findFirst()
                 .orElse(null);
+    }
+
+    private void saveDashboardNotificationAsMetadata(JobRunrMetadata metadata) {
+        try {
+            storageProvider.saveMetadata(metadata);
+        } catch (Exception e) {
+            LOGGER.debug("Unable to save dashboard notification metadata", e); // this is acceptable and means the same notification was saved concurrently
+        }
     }
 }
