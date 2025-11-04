@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -35,9 +36,9 @@ public class TestService implements TestServiceInterface {
 
     private static final Logger LOGGER = new JobRunrDashboardLogger(LoggerFactory.getLogger(TestService.class));
 
-    private static int processedJobs = 0;
+    private static long processedJobs = 0;
 
-    public int getProcessedJobs() {
+    public long getProcessedJobs() {
         return processedJobs;
     }
 
@@ -45,6 +46,7 @@ public class TestService implements TestServiceInterface {
         LOGGER.debug("Doing some work from a static method... ");
     }
 
+    @Job(retries = 0)
     public void doWork(Runnable runnable) throws Exception {
         runnable.run();
     }
@@ -60,6 +62,10 @@ public class TestService implements TestServiceInterface {
 
     public void doWorkWithPath(Path path) throws Exception {
         LOGGER.debug("Doing some work... " + path.toFile().getAbsolutePath());
+    }
+
+    public void doWorkWithList(List<String> list) throws Exception {
+        LOGGER.warn("Doing some work with {} ", list);
     }
 
     public void doWork(Work work) throws Exception {
@@ -155,6 +161,7 @@ public class TestService implements TestServiceInterface {
     }
 
     @Job(name = "Doing some work")
+    @Override
     public void doWork() {
         processedJobs++;
         LOGGER.debug("Doing some work... " + processedJobs);
@@ -298,6 +305,7 @@ public class TestService implements TestServiceInterface {
         return UUID.randomUUID();
     }
 
+    @SuppressWarnings("unused")
     private void aPrivateMethod(String string, int someNumber) {
         LOGGER.debug("Nothing to do");
     }
@@ -363,7 +371,7 @@ public class TestService implements TestServiceInterface {
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (!(o instanceof Work)) return false;
 
             Work work = (Work) o;
 
@@ -477,6 +485,14 @@ public class TestService implements TestServiceInterface {
         public Void doWork() {
             LOGGER.debug("Simple Command " + string + " " + integer);
             return null;
+        }
+
+        public String getString() {
+            return string;
+        }
+
+        public int getInteger() {
+            return integer;
         }
     }
 

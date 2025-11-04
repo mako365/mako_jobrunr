@@ -1,11 +1,13 @@
 package org.jobrunr.server.dashboard;
 
+import org.jobrunr.server.dashboard.mappers.CarbonIntensityApiErrorNotificationMapper;
 import org.jobrunr.server.dashboard.mappers.CpuAllocationIrregularityNotificationMapper;
 import org.jobrunr.server.dashboard.mappers.DashboardNotificationMapper;
 import org.jobrunr.server.dashboard.mappers.PollIntervalInSecondsTimeBoxIsTooSmallNotificationMapper;
 import org.jobrunr.server.dashboard.mappers.SevereJobRunrExceptionNotificationMapper;
 import org.jobrunr.storage.JobRunrMetadata;
 import org.jobrunr.storage.StorageProvider;
+import org.jobrunr.utils.reflection.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,7 +16,6 @@ import java.util.Set;
 import java.util.UUID;
 
 import static java.util.Arrays.asList;
-import static org.jobrunr.utils.reflection.ReflectionUtils.newInstance;
 
 public class DashboardNotificationManager {
 
@@ -28,7 +29,8 @@ public class DashboardNotificationManager {
         this.notificationMappers = new HashSet<>(asList(
                 new SevereJobRunrExceptionNotificationMapper(backgroundJobServerId, storageProvider),
                 new CpuAllocationIrregularityNotificationMapper(backgroundJobServerId),
-                new PollIntervalInSecondsTimeBoxIsTooSmallNotificationMapper(backgroundJobServerId)
+                new PollIntervalInSecondsTimeBoxIsTooSmallNotificationMapper(backgroundJobServerId),
+                new CarbonIntensityApiErrorNotificationMapper(backgroundJobServerId)
         ));
     }
 
@@ -53,7 +55,7 @@ public class DashboardNotificationManager {
         return storageProvider
                 .getMetadata(notificationClass.getSimpleName())
                 .stream()
-                .map(metadata -> newInstance(notificationClass, metadata))
+                .map(metadata -> ReflectionUtils.newInstance(notificationClass, metadata))
                 .findFirst()
                 .orElse(null);
     }

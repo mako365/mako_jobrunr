@@ -6,7 +6,6 @@ import org.testcontainers.images.PullPolicy;
 
 import java.time.Duration;
 
-import static java.lang.System.getProperty;
 import static org.assertj.core.api.Assertions.assertThat;
 
 // why: we create a build of the current gradle module inside docker container for each JDK
@@ -19,17 +18,17 @@ class JdkTest {
 
     @Test
     void jdk8OpenJdk() {
-        assertThat(buildAndTestOnImage("adoptopenjdk:8-jdk-hotspot", "52.0")).contains("BUILD SUCCESS");
+        assertThat(buildAndTestOnImage("openjdk:8-jdk-slim", "52.0")).contains("BUILD SUCCESS");
     }
 
     @Test
     void jdk11OpenJdk() {
-        assertThat(buildAndTestOnImage("adoptopenjdk:11-jdk-hotspot", "55.0")).contains("BUILD SUCCESS");
+        assertThat(buildAndTestOnImage("openjdk:11-jdk-slim", "55.0")).contains("BUILD SUCCESS");
     }
 
     @Test
     void jdk17OpenJDK() {
-        assertThat(buildAndTestOnImage(architecture() + "/openjdk:17", "61.0"))
+        assertThat(buildAndTestOnImage("openjdk:17-jdk-slim", "61.0"))
                 .contains("BUILD SUCCESS")
                 .contains("ThreadManager of type 'ScheduledThreadPool' started");
     }
@@ -49,28 +48,19 @@ class JdkTest {
     }
 
     @Test
-    void jdk24OpenJDK() {
-        assertThat(buildAndTestOnImage("openjdk:24", "68.0"))
+    void jdk25OpenJDK() {
+        assertThat(buildAndTestOnImage("openjdk:25", "69.0"))
                 .contains("BUILD SUCCESS")
                 .contains("ThreadManager of type 'VirtualThreadPerTask' started");
     }
 
     private String buildAndTestOnImage(String dockerfile, String javaClassVersion) {
         final MavenBuildAndTestContainer buildAndTestContainer = new MavenBuildAndTestContainer(dockerfile);
-        try {
-            buildAndTestContainer
-                    .withImagePullPolicy(PullPolicy.ageBased(Duration.ofDays(14)))
-                    .withEnv("JAVA_CLASS_VERSION", javaClassVersion)
-                    .withStartupTimeout(Duration.ofMinutes(2))
-                    .start();
-        } finally {
-            String logs = buildAndTestContainer.getLogs();
-            //System.out.println(logs);
-            return logs;
-        }
-    }
-
-    private static String architecture() {
-        return "aarch64".equals(getProperty("os.arch")) ? "arm64v8" : "amd64";
+        buildAndTestContainer
+                .withImagePullPolicy(PullPolicy.ageBased(Duration.ofDays(14)))
+                .withEnv("JAVA_CLASS_VERSION", javaClassVersion)
+                .withStartupTimeout(Duration.ofMinutes(2))
+                .start();
+        return buildAndTestContainer.getLogs();
     }
 }

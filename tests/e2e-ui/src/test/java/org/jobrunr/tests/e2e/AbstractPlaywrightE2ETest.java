@@ -57,6 +57,10 @@ public class AbstractPlaywrightE2ETest {
         return page.getByTitle(title, new Page.GetByTitleOptions().setExact(true));
     }
 
+    protected Locator dashboardTabBtn() {
+        return page.locator("#dashboard-btn");
+    }
+
     protected Locator jobTabButton() {
         return page.locator("#jobs-btn");
     }
@@ -65,8 +69,16 @@ public class AbstractPlaywrightE2ETest {
         return page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName(name));
     }
 
+    protected Locator awaitingMenuBtn() {
+        return page.locator("#awaiting-menu-btn");
+    }
+
     protected Locator scheduledMenuBtn() {
         return page.locator("#scheduled-menu-btn");
+    }
+
+    protected Locator carbonIntensityChart() {
+        return page.locator(".carbon-intensity-chart");
     }
 
     protected Locator enqueuedMenuBtn() {
@@ -119,6 +131,10 @@ public class AbstractPlaywrightE2ETest {
 
     protected Locator jobTableRows() {
         return jobTable().locator("tbody>tr");
+    }
+
+    protected void jobTableRowsClickOnFirstJob() {
+        jobTableRows().first().locator("td a").first().click();
     }
 
     protected Locator noJobsFoundMessage() {

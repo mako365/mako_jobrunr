@@ -27,8 +27,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -89,7 +91,7 @@ public abstract class AbstractJobDetailsGeneratorTest {
         String name = AbstractJobDetailsGeneratorTest.class.getName();
         String location = new File(".").getAbsolutePath() + "/build/classes/java/test/" + toFQResource(name) + ".class";
 
-        //String location = "/Users/rdehuyss/Projects/Personal/jobrunr/jobrunr/language-support/jobrunr-kotlin-16-support/build/classes/kotlin/test/org/jobrunr/scheduling/JobSchedulerTest.class";
+        //String location = "/Users/rdehuyss/Projects/Jobrunr/jobrunr/language-support/jobrunr-kotlin-21-support/build/classes/kotlin/test/org/jobrunr/scheduling/JobSchedulerTest.class";
         assertThatCode(() -> Textifier.main(new String[]{location})).doesNotThrowAnyException();
     }
 
@@ -169,11 +171,42 @@ public abstract class AbstractJobDetailsGeneratorTest {
 
     @Test
     void testJobLambdaCallInstanceMethod_Null() {
-        TestService.Work work = null;
-        JobLambda job = () -> testService.doWork(work);
-        assertThatThrownBy(() -> toJobDetails(job))
-                .isInstanceOf(NullPointerException.class)
-                .hasMessage("You are passing null as a parameter to your background job for type org.jobrunr.stubs.TestService$Work - JobRunr prevents this to fail fast.");
+        TestService.Work work1 = null;
+        JobLambda job1 = () -> testService.doWork(work1);
+        JobDetails jobDetails1 = toJobDetails(job1);
+        assertThat(jobDetails1)
+                .hasClass(TestService.class)
+                .hasMethodName("doWork")
+                .hasArg(Objects::isNull);
+
+        TestService.Work work2 = new TestService.Work(2, "boe", UUID.randomUUID());
+        JobLambda job2 = () -> testService.doWork(work2);
+        JobDetails jobDetails2 = toJobDetails(job2);
+        assertThat(jobDetails2)
+                .hasClass(TestService.class)
+                .hasMethodName("doWork")
+                .hasArgs(work2);
+    }
+
+    @Test
+    void testJobLambdaCallInstanceMethod_NullVariableForList() {
+        List<String> list = null;
+        JobLambda job = () -> testService.doWorkWithList(list);
+        JobDetails jobDetails = toJobDetails(job);
+        assertThat(jobDetails)
+                .hasClass(TestService.class)
+                .hasMethodName("doWorkWithList")
+                .hasArg(Objects::isNull);
+    }
+
+    @Test
+    void testJobLambdaCallInstanceMethod_NullForList() {
+        JobLambda job = () -> testService.doWorkWithList(null);
+        JobDetails jobDetails = toJobDetails(job);
+        assertThat(jobDetails)
+                .hasClass(TestService.class)
+                .hasMethodName("doWorkWithList")
+                .hasArg(Objects::isNull);
     }
 
     @Test
@@ -481,7 +514,7 @@ public abstract class AbstractJobDetailsGeneratorTest {
     @Test
     void testJobLambdaCallingMultiLineStatementSystemOutPrintln() {
         final List<UUID> workStream = getWorkStream().collect(toList());
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneId.systemDefault());
         for (UUID id : workStream) {
             JobLambda job = () -> {
                 UUID testId = id;
