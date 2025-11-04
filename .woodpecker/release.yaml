@@ -1,0 +1,48 @@
+when:
+  event:
+    - tag
+
+steps:
+  - name: prepare-docker-build-container
+    image: docker
+    privileged: true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    commands:
+      - echo "Running on ${CI_SYSTEM_NAME:-<not set>}"
+      - docker build -f BuildDockerfile -t container-registry.jobrunr.io/build-container:latest .
+
+  - name: build-and-upload-to-maven-central
+    image: container-registry.jobrunr.io/build-container:latest
+    commands:
+      - rm -f *.hprof
+      - rm -rf /tmp/reports/*
+      - find /woodpecker/jobrunr/src/.gradle -name "*.lock" -type f -delete
+      - |
+        bash -lc '
+          set -e -o pipefail
+          gradle --no-daemon -Djib.console=plain --info clean assemble publishToSonatype \
+            | grep -Ev "^(Found locally available resource with matching checksum|BuildToolsApiClasspathEntrySnapshotTransform|ClasspathEntrySnapshotTransform|Resource missing\\.)"
+        '
+      - |
+        bash -lc '
+          SONATYPE_KEY=$(curl -X GET -H "$SONATYPE_AUTH_HEADER" https://ossrh-staging-api.central.sonatype.com/manual/search/repositories\?profile_id\=org.jobrunr\&state\=open\&ip\=any | grep "key" | sed 's/"key": "//' | sed 's/",//' | tr -d ' ')
+          echo "Sonatype OSSRH Staging API Repository key $SONATYPE_KEY found"
+          curl -X POST -H "$SONATYPE_AUTH_HEADER" https://ossrh-staging-api.central.sonatype.com/manual/upload/repository/$SONATYPE_KEY
+          echo "Sonatype Upload from Staging API to Portal complete. Go to https://central.sonatype.com/publishing/deployments to finish the release."
+        '
+    environment:
+      BUILD_CACHE_USER:
+        from_secret: BUILD_CACHE_USER
+      BUILD_CACHE_PASSWORD:
+        from_secret: BUILD_CACHE_PASSWORD
+      SIGNING_KEY:
+        from_secret: SIGNING_KEY
+      SIGNING_PASSWORD:
+        from_secret: SIGNING_PASSWORD
+      SONATYPE_AUTH_HEADER:
+        from_secret: SONATYPE_AUTH_HEADER
+      ORG_GRADLE_PROJECT_sonatypeUsername:
+        from_secret: ORG_GRADLE_PROJECT_sonatypeUsername
+      ORG_GRADLE_PROJECT_sonatypePassword:
+        from_secret: ORG_GRADLE_PROJECT_sonatypePassword

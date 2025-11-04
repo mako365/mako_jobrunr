@@ -8,6 +8,24 @@ pluginManagement {
     }
 }
 
+buildCache {
+    local {
+        enabled = true
+    }
+
+    if (System.getenv('CI')) {
+        remote(HttpBuildCache) {
+            url = uri("http://192.168.129.102:5071/cache/")
+            push = true
+            allowInsecureProtocol = true
+            credentials {
+                username = System.getenv('BUILD_CACHE_USER')
+                password = System.getenv('BUILD_CACHE_PASSWORD')
+            }
+        }
+    }
+}
+
 rootProject.name = 'JobRunr'
 include ':platform'
 include ':core'
@@ -18,7 +36,7 @@ include ':framework-support:jobrunr-micronaut-feature'
 include ':framework-support:jobrunr-quarkus-extension:quarkus-jobrunr-deployment'
 include ':framework-support:jobrunr-quarkus-extension:quarkus-jobrunr'
 include ':framework-support:jobrunr-quarkus-extension:tests'
-include ':framework-support:jobrunr-spring-boot-2-starter'
-//include ':framework-support:jobrunr-spring-boot-3-starter'
+//include ':framework-support:jobrunr-spring-boot-2-starter'
+include ':framework-support:jobrunr-spring-boot-3-starter'
 include ':tests:e2e-ui'
 include ':tests:e2e-vm-jdk'
