@@ -254,11 +254,6 @@ public class JobRunrProperties {
         private Integer pollIntervalInSeconds = 15;
 
         /**
-         * Timeout until a job is marked as dead while long execution
-         */
-        private Integer pollIntervalToTimeoutMultiplier = 10;
-
-        /**
          * Set the pollInterval multiplicand used to determine when a BackgroundJobServer has timed out and processing jobs are orphaned.
          */
         private Integer serverTimeoutPollIntervalMultiplicand = 4;
