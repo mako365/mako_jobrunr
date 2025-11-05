@@ -11,6 +11,7 @@ import org.jobrunr.jobs.lambdas.IocJobLambda;
 import org.jobrunr.jobs.lambdas.IocJobLambdaFromStream;
 import org.jobrunr.jobs.lambdas.JobLambda;
 import org.jobrunr.jobs.lambdas.JobLambdaFromStream;
+import org.jobrunr.jobs.states.ScheduledState;
 import org.jobrunr.scheduling.cron.CronExpression;
 import org.jobrunr.scheduling.interval.Interval;
 import org.jobrunr.storage.StorageProvider;
@@ -212,6 +213,27 @@ public class JobScheduler extends AbstractJobScheduler {
     }
 
     /**
+     * Creates new fire-and-forget jobs for each item in the input stream using the lambda
+     * passed as {@code jobFromStream} and schedules it to be enqueued at the given moment of time.
+     * <h5>An example:</h5>
+     * <pre>{@code
+     *      MyService service = new MyService();
+     *      Stream<UUID> workStream = getWorkStream();
+     *      jobScheduler.enqueue(workStream, ZonedDateTime.now().plusHours(5), (uuid) -> service.doWork(uuid));
+     * }</pre>
+     *
+     * @param input         the stream of items for which to create fire-and-forget jobs
+     * @param zonedDateTime the moment in time at which the job will be enqueued.
+     * @param jobFromStream the lambda which defines the fire-and-forget job to create for each item in the {@code input}
+     */
+    public <T> void schedule(Stream<T> input, ZonedDateTime zonedDateTime, JobLambdaFromStream<T> jobFromStream) {
+        input
+                .map(x -> jobDetailsGenerator.toJobDetails(x, jobFromStream))
+                .map(jobDetails -> new Job(null, jobDetails, new ScheduledState(zonedDateTime.toInstant())))
+                .collect(batchCollector(BATCH_SIZE, this::saveJobs));
+    }
+
+    /**
      * Creates a new fire-and-forget job based on the given lambda and schedules it to be enqueued at the given moment of time.
      * If a job with that id already exists, JobRunr will not save it again.
      * <h5>An example:</h5>
@@ -275,6 +297,27 @@ public class JobScheduler extends AbstractJobScheduler {
      */
     public JobId schedule(OffsetDateTime offsetDateTime, JobLambda job) {
         return schedule(null, offsetDateTime.toInstant(), job);
+    }
+
+    /**
+     * Creates new fire-and-forget jobs for each item in the input stream using the lambda
+     * passed as {@code jobFromStream} and schedules it to be enqueued at the given moment of time.
+     * <h5>An example:</h5>
+     * <pre>{@code
+     *      MyService service = new MyService();
+     *      Stream<UUID> workStream = getWorkStream();
+     *      jobScheduler.enqueue(workStream, OffsetDateTime.now().plusHours(5), (uuid) -> service.doWork(uuid));
+     * }</pre>
+     *
+     * @param input         the stream of items for which to create fire-and-forget jobs
+     * @param offsetDateTime the moment in time at which the job will be enqueued.
+     * @param jobFromStream the lambda which defines the fire-and-forget job to create for each item in the {@code input}
+     */
+    public <T> void schedule(Stream<T> input, OffsetDateTime offsetDateTime, JobLambdaFromStream<T> jobFromStream) {
+        input
+                .map(x -> jobDetailsGenerator.toJobDetails(x, jobFromStream))
+                .map(jobDetails -> new Job(null, jobDetails, new ScheduledState(offsetDateTime.toInstant())))
+                .collect(batchCollector(BATCH_SIZE, this::saveJobs));
     }
 
     /**
@@ -344,6 +387,26 @@ public class JobScheduler extends AbstractJobScheduler {
     }
 
     /**
+     * Creates new fire-and-forget jobs for each item in the input stream using the lambda passed as {@code jobFromStream}.
+     * <h5>An example:</h5>
+     * <pre>{@code
+     *      MyService service = new MyService();
+     *      Stream<UUID> workStream = getWorkStream();
+     *      jobScheduler.enqueue(workStream, LocalDateTime.now().plusHours(5), (uuid) -> service.doWork(uuid));
+     * }</pre>
+     *
+     * @param input         the stream of items for which to create fire-and-forget jobs
+     * @param localDateTime the moment in time at which the job will be enqueued. It will use the systemDefault ZoneId to transform it to an UTC Instant
+     * @param jobFromStream the lambda which defines the fire-and-forget job to create for each item in the {@code input}
+     */
+    public <T> void schedule(Stream<T> input, LocalDateTime localDateTime, JobLambdaFromStream<T> jobFromStream) {
+        input
+                .map(x -> jobDetailsGenerator.toJobDetails(x, jobFromStream))
+                .map(jobDetails -> new Job(null, jobDetails, new ScheduledState(localDateTime.atZone(systemDefault()).toInstant())))
+                .collect(batchCollector(BATCH_SIZE, this::saveJobs));
+    }
+
+    /**
      * Creates a new fire-and-forget job based on the given lambda and schedules it to be enqueued at the given moment of time.
      * If a job with that id already exists, JobRunr will not save it again.
      * <h5>An example:</h5>
@@ -407,6 +470,27 @@ public class JobScheduler extends AbstractJobScheduler {
      */
     public JobId schedule(Instant instant, JobLambda job) {
         return schedule(null, instant, job);
+    }
+
+    /**
+     * Creates new fire-and-forget jobs for each item in the input stream using the lambda
+     * passed as {@code jobFromStream} and schedules it to be enqueued at the given moment of time.
+     * <h5>An example:</h5>
+     * <pre>{@code
+     *      MyService service = new MyService();
+     *      Stream<UUID> workStream = getWorkStream();
+     *      jobScheduler.enqueue(workStream, Instant.now().plusHours(5), (uuid) -> service.doWork(uuid));
+     * }</pre>
+     *
+     * @param input         the stream of items for which to create fire-and-forget jobs
+     * @param instant the moment in time at which the job will be enqueued.
+     * @param jobFromStream the lambda which defines the fire-and-forget job to create for each item in the {@code input}
+     */
+    public <T> void schedule(Stream<T> input, Instant instant, JobLambdaFromStream<T> jobFromStream) {
+        input
+                .map(x -> jobDetailsGenerator.toJobDetails(x, jobFromStream))
+                .map(jobDetails -> new Job(null, jobDetails, new ScheduledState(instant)))
+                .collect(batchCollector(BATCH_SIZE, this::saveJobs));
     }
 
     /**

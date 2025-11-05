@@ -42,7 +42,6 @@ import static java.time.Duration.ofMillis;
 import static java.time.Duration.ofSeconds;
 import static java.time.Instant.now;
 import static java.time.ZoneId.systemDefault;
-import static java.time.temporal.ChronoUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -280,11 +279,27 @@ public class BackgroundJobByJobLambdaTest {
     }
 
     @Test
+    void testScheduleManyWithZonedDateTime() {
+        Stream<UUID> workStream = getWorkStream();
+        AtomicInteger atomicInteger = new AtomicInteger();
+        BackgroundJob.schedule(workStream, ZonedDateTime.now().plus(ofMillis(1500)), (uuid) -> testService.doWork(uuid.toString(), atomicInteger.incrementAndGet(), now()));
+        await().atMost(FIVE_SECONDS).untilAsserted(() -> assertThat(storageProvider.countJobs(SUCCEEDED)).isEqualTo(5));
+    }
+
+    @Test
     void testScheduleWithOffsetDateTime() {
         JobId jobId = BackgroundJob.schedule(OffsetDateTime.now().plus(ofMillis(1500)), () -> testService.doWork());
         await().during(ONE_SECOND).until(() -> storageProvider.getJobById(jobId).getState() == SCHEDULED);
         await().atMost(FIVE_SECONDS).until(() -> storageProvider.getJobById(jobId).getState() == SUCCEEDED);
         assertThat(storageProvider.getJobById(jobId)).hasStates(SCHEDULED, ENQUEUED, PROCESSING, SUCCEEDED);
+    }
+
+    @Test
+    void testScheduleManyWithOffsetDateTime() {
+        Stream<UUID> workStream = getWorkStream();
+        AtomicInteger atomicInteger = new AtomicInteger();
+        BackgroundJob.schedule(workStream, OffsetDateTime.now().plus(ofMillis(1500)), (uuid) -> testService.doWork(uuid.toString(), atomicInteger.incrementAndGet(), now()));
+        await().atMost(FIVE_SECONDS).untilAsserted(() -> assertThat(storageProvider.countJobs(SUCCEEDED)).isEqualTo(5));
     }
 
     @Test
@@ -296,11 +311,27 @@ public class BackgroundJobByJobLambdaTest {
     }
 
     @Test
+    void testScheduleManyWithLocalDateTime() {
+        Stream<UUID> workStream = getWorkStream();
+        AtomicInteger atomicInteger = new AtomicInteger();
+        BackgroundJob.schedule(workStream, LocalDateTime.now().plus(ofMillis(1500)), (uuid) -> testService.doWork(uuid.toString(), atomicInteger.incrementAndGet(), now()));
+        await().atMost(FIVE_SECONDS).untilAsserted(() -> assertThat(storageProvider.countJobs(SUCCEEDED)).isEqualTo(5));
+    }
+
+    @Test
     void testScheduleWithInstant() {
         JobId jobId = BackgroundJob.schedule(now().plus(ofMillis(1500)), () -> testService.doWork());
         await().during(ONE_SECOND).until(() -> storageProvider.getJobById(jobId).getState() == SCHEDULED);
         await().atMost(FIVE_SECONDS).until(() -> storageProvider.getJobById(jobId).getState() == SUCCEEDED);
         assertThat(storageProvider.getJobById(jobId)).hasStates(SCHEDULED, ENQUEUED, PROCESSING, SUCCEEDED);
+    }
+
+    @Test
+    void testScheduleManyWithInstant() {
+        Stream<UUID> workStream = getWorkStream();
+        AtomicInteger atomicInteger = new AtomicInteger();
+        BackgroundJob.schedule(workStream, now().plus(ofMillis(1500)), (uuid) -> testService.doWork(uuid.toString(), atomicInteger.incrementAndGet(), now()));
+        await().atMost(FIVE_SECONDS).untilAsserted(() -> assertThat(storageProvider.countJobs(SUCCEEDED)).isEqualTo(5));
     }
 
     @Test
