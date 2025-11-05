@@ -137,6 +137,19 @@ publishing {
             }
         }
     }
+    repositories {
+        maven {
+            version = System.getenv('DRONE_TAG')?.replace("v", "") ?: "v1.0.0-SNAPSHOT".replace("v", "")
+            url "https://gitlab.com/api/v4/projects/44506810/packages/maven"
+            credentials(HttpHeaderCredentials) {
+                name = 'Job-Token'
+                value = System.getenv("CI_JOB_TOKEN")
+            }
+            authentication {
+                header(HttpHeaderAuthentication)
+            }
+        }
+    }
 }
 
 signing {
@@ -149,4 +162,24 @@ signing {
 
 sonar {
     skipProject = true
+}
+
+configure(subprojects.findAll {! ['platform'].contains(it.name)}) {
+    apply plugin: 'java'
+    apply plugin: 'idea'
+
+    repositories {
+        mavenCentral()
+        mavenLocal()
+        maven {
+            url "https://gitlab.com/api/v4/projects/44506810/packages/maven/"
+            credentials(HttpHeaderCredentials) {
+                name = 'Job-Token'
+                value = System.getenv("CI_JOB_TOKEN")
+            }
+            authentication {
+                header(HttpHeaderAuthentication)
+            }
+        }
+    }
 }
