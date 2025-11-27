@@ -42,6 +42,7 @@ import static java.time.Duration.ofMillis;
 import static java.time.Duration.ofSeconds;
 import static java.time.Instant.now;
 import static java.time.ZoneId.systemDefault;
+import static java.time.temporal.ChronoUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -467,14 +468,14 @@ public class BackgroundJobByJobLambdaTest {
         assertThat(storageProvider.getRecurringJobs()).isEmpty();
     }
 
-//    @Test
-//    void orphanedJobsStuckInProcessingStateAreRescheduled() {
-//        Job orphanedJob = anEnqueuedJob().withState(new ProcessingState(backgroundJobServer), now().minus(15, MINUTES)).build();
-//        Job job = storageProvider.save(orphanedJob);
-//        await().atMost(3, SECONDS)
-//                .untilAsserted(() -> assertThat(storageProvider.getJobById(job.getId())).hasStates(ENQUEUED, PROCESSING, FAILED, SCHEDULED));
-//        assertThat(logAllStateChangesFilter.getStateChanges(job)).containsExactly("PROCESSING->FAILED", "FAILED->SCHEDULED");
-//    }
+    @Test
+    void orphanedJobsStuckInProcessingStateAreRescheduled() {
+        Job orphanedJob = anEnqueuedJob().withState(new ProcessingState(backgroundJobServer), now().minus(15, MINUTES)).build();
+        Job job = storageProvider.save(orphanedJob);
+        await().atMost(3, SECONDS)
+                .untilAsserted(() -> assertThat(storageProvider.getJobById(job.getId())).hasStates(ENQUEUED, PROCESSING, FAILED, SCHEDULED));
+        assertThat(logAllStateChangesFilter.getStateChanges(job)).containsExactly("PROCESSING->FAILED", "FAILED->SCHEDULED");
+    }
 
     @Test
     void jobCanBeUpdatedInTheBackgroundAndThenGoToSucceededState() {
