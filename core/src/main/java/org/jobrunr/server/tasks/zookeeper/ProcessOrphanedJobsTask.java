@@ -1,11 +1,15 @@
 package org.jobrunr.server.tasks.zookeeper;
 
 import org.jobrunr.jobs.Job;
+import org.jobrunr.jobs.states.JobState;
+import org.jobrunr.jobs.states.ProcessingState;
 import org.jobrunr.server.BackgroundJobServer;
+import org.jobrunr.storage.BackgroundJobServerStatus;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 import static java.util.Collections.emptyList;
 import static org.jobrunr.jobs.states.StateName.PROCESSING;
@@ -37,6 +41,16 @@ public class ProcessOrphanedJobsTask extends AbstractJobZooKeeperTask {
     }
 
     private void changeJobStateToFailedAndRunJobFilter(Job job) {
+        JobState jobState = job.getJobState();
+        if (jobState != null && PROCESSING.equals(jobState.getName())) {
+            ProcessingState processingState = (ProcessingState) jobState;
+            UUID serverId = processingState.getServerId();
+            List<BackgroundJobServerStatus> jobServers = storageProvider.getBackgroundJobServers();
+            if (jobServers.stream().anyMatch(jobServer -> jobServer.getId().equals(serverId))) {
+                LOGGER.warn("Found orphan job {} but keep it running since the server is still alive.", job.getId());
+                return;
+            }
+        }
         IllegalThreadStateException e = new IllegalThreadStateException("Job was too long in PROCESSING state without being updated.");
         jobFilterUtils.runOnJobProcessingFailedFilters(job, e);
         job.failed("Orphaned job", e);
