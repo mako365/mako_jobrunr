@@ -1,5 +1,5 @@
-import {createTheme, styled, StyledEngineProvider, ThemeProvider} from '@mui/material/styles';
-import {Navigate, Route, Routes} from 'react-router-dom';
+import {createTheme, styled, ThemeProvider} from '@mui/material/styles';
+import {Navigate, Route, Routes} from 'react-router';
 import TopAppBar from "./TopAppBar";
 import Overview from "../components/overview/overview";
 import Servers from "../components/servers/servers";
@@ -9,12 +9,10 @@ import JobView from "../components/jobs/job-view";
 import JobsView from "../components/jobs/jobs-view";
 import Sidebar from "../components/jobs/sidebar";
 import GithubStarPopup from "../components/utils/github-star-popup";
-import {DEFAULT_JOBRUNR_INFO, JobRunrInfoContext} from "../JobRunrInfoContext";
-import {useCallback, useEffect, useMemo, useState} from "react";
-import {ProblemsContext} from "../ProblemsContext";
-import {getNewVersionProblem, LATEST_DISMISSED_VERSION_STORAGE_KEY} from "../components/overview/problems/new-jobrunr-version-available";
-import {getApiNotificationProblem} from "../components/overview/problems/jobrunr-api-notification";
-
+import {DEFAULT_JOBRUNR_INFO, JobRunrInfoContext} from "../contexts/JobRunrInfoContext";
+import {useEffect, useState} from "react";
+import {setServers} from "../hooks/useServers";
+import LoadingIndicator from "../components/LoadingIndicator.js";
 
 const Main = styled("main")(({theme}) => ({
     padding: theme.spacing(3),
@@ -51,12 +49,13 @@ const App = () => {
             <TopAppBar/>
             <Main>
                 <Routes>
+                    <Route index element={<Overview/>}/>
                     <Route path="overview" element={<Overview/>}/>
                     <Route path="jobs/:jobId" element={<JobViewWithSideBar/>}/>
                     <Route path="jobs" element={<JobsViewWithSidebar/>}/>
                     <Route path="recurring-jobs" element={<RecurringJobs/>}/>
                     <Route path="servers" element={<Servers/>}/>
-                    <Route path="*" element={<Navigate to="overview" replace/>}/>
+                    <Route path="*" element={<Navigate to=".." replace/>}/>
                 </Routes>
             </Main>
         </div>
@@ -64,65 +63,29 @@ const App = () => {
 }
 
 const AdminUI = function () {
+    const [isLoading, setIsLoading] = useState(true);
     const [jobRunrInfo, setJobRunrInfo] = useState(DEFAULT_JOBRUNR_INFO);
-    const [problems, setProblems] = useState([]);
-    const [isLoadingProblems, setIsLoadingProblems] = useState(false);
-    const [latestVersion, setLatestVersion] = useState(false);
-    const [apiNotification, setApiNotification] = useState();
-
-    const resetLatestVersion = useCallback(() => {
-        setLatestVersion(undefined);
-    }, []);
-
-    const reloadProblems = useCallback(() => {
-        setIsLoadingProblems(true);
-        fetch(`/api/problems`).then(res => res.json())
-            .then(problems => setProblems(problems))
-            .catch(e => console.error("Failed to reload problems", e))
-            .finally(() => setIsLoadingProblems(false));
-    }, []);
 
     useEffect(() => {
         Promise.all([
+            fetch("/api/servers").then(res => res.json()),
             fetch("/api/version").then(res => res.json()),
-            fetch("/api/problems").then(res => res.json()),
-            fetch("https://api.jobrunr.io/api/version/jobrunr/latest").then(res => res.json()).catch(() => undefined /* ignored */),
-            fetch("https://api.jobrunr.io/api/notifications/jobrunr").then(res => res.json()).catch(() => undefined /* ignored */),
-        ]).then(([jobRunrInfo, problems, latestVersion, apiNotification]) => {
+        ]).then(([servers, jobRunrInfo]) => {
+            setServers(servers);
             setJobRunrInfo(jobRunrInfo);
-            setProblems(problems);
-            setLatestVersion(latestVersion["latestVersion"]);
-            setApiNotification(apiNotification);
-        }).catch(error => console.log(error));
+        }).catch(error => console.log(error))
+            .finally(() => setIsLoading(false));
     }, []);
 
-    const problemsContext = useMemo(() => {
-            const p = [...problems];
-            if (latestVersion && localStorage.getItem(LATEST_DISMISSED_VERSION_STORAGE_KEY) !== latestVersion) {
-                const newVersionProblem = getNewVersionProblem(jobRunrInfo.version, latestVersion);
-                if (newVersionProblem) p.push({...newVersionProblem, reset: resetLatestVersion});
-            }
-            if (apiNotification) p.push(getApiNotificationProblem(apiNotification));
-
-            return {
-                problems: p,
-                isLoading: isLoadingProblems,
-                reload: reloadProblems
-            }
-        },
-        [problems, reloadProblems, isLoadingProblems, latestVersion, resetLatestVersion, jobRunrInfo.version, apiNotification]
-    );
-
     return (
-        <StyledEngineProvider injectFirst>
-            <ThemeProvider theme={theme}>
-                <JobRunrInfoContext.Provider value={jobRunrInfo}>
-                    <ProblemsContext.Provider value={problemsContext}>
-                        <App/>
-                    </ProblemsContext.Provider>
-                </JobRunrInfoContext.Provider>
-            </ThemeProvider>
-        </StyledEngineProvider>
+        <ThemeProvider theme={theme}>
+            {isLoading ?
+                <LoadingIndicator/>
+                : <JobRunrInfoContext value={jobRunrInfo}>
+                    <App/>
+                </JobRunrInfoContext>
+            }
+        </ThemeProvider>
     );
 };
 

@@ -3,6 +3,7 @@ package org.jobrunr.quarkus.extension.deployment;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.BeanContainerBuildItem;
 import io.quarkus.arc.deployment.UnremovableBeanBuildItem;
+import io.quarkus.arc.deployment.ValidationPhaseBuildItem.ValidationErrorBuildItem;
 import io.quarkus.deployment.Capabilities;
 import io.quarkus.deployment.Capability;
 import io.quarkus.deployment.annotations.BuildProducer;
@@ -16,6 +17,7 @@ import io.quarkus.deployment.builditem.nativeimage.NativeImageResourceDirectoryB
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedClassBuildItem;
 import io.quarkus.deployment.metrics.MetricsCapabilityBuildItem;
+import io.quarkus.deployment.pkg.steps.NativeBuild;
 import io.quarkus.deployment.pkg.steps.NativeOrNativeSourcesBuild;
 import io.quarkus.deployment.recording.RecorderContext;
 import io.quarkus.runtime.annotations.RegisterForReflection;
@@ -41,6 +43,8 @@ import org.jobrunr.quarkus.autoconfigure.storage.JobRunrDocumentDBStorageProvide
 import org.jobrunr.quarkus.autoconfigure.storage.JobRunrInMemoryStorageProviderProducer;
 import org.jobrunr.quarkus.autoconfigure.storage.JobRunrMongoDBStorageProviderProducer;
 import org.jobrunr.quarkus.autoconfigure.storage.JobRunrSqlStorageProviderProducer;
+import org.jobrunr.quarkus.extension.deployment.AsyncJobValidator.IllegalAsyncJobAnnotationException;
+import org.jobrunr.scheduling.AsyncJobInterceptor;
 import org.jobrunr.scheduling.JobRunrRecurringJobRecorder;
 import org.jobrunr.storage.StorageProvider;
 import org.jobrunr.storage.nosql.common.NoSqlDatabaseCreator;
@@ -57,6 +61,7 @@ import java.util.stream.Stream;
 import static org.jobrunr.server.configuration.BackgroundJobServerThreadType.VirtualThreads;
 import static org.jobrunr.utils.CollectionUtils.asSet;
 import static org.jobrunr.utils.VersionNumber.JAVA_VERSION;
+import static org.jobrunr.utils.reflection.ReflectionUtils.classExists;
 
 /**
  * Class responsible for creating additional JobRunr beans in Quarkus.
@@ -68,6 +73,20 @@ class JobRunrExtensionProcessor {
     @BuildStep
     FeatureBuildItem feature() {
         return new FeatureBuildItem(FEATURE);
+    }
+
+    @BuildStep
+    AdditionalBeanBuildItem asyncJobInterceptor() {
+        return AdditionalBeanBuildItem.unremovableOf(AsyncJobInterceptor.class);
+    }
+
+    @BuildStep
+    void validateAsyncJobs(CombinedIndexBuildItem index, BuildProducer<ValidationErrorBuildItem> validationErrors) {
+        try {
+            AsyncJobValidator.validate(index);
+        } catch (IllegalAsyncJobAnnotationException e) {
+            validationErrors.produce(new ValidationErrorBuildItem(e));
+        }
     }
 
     @BuildStep
@@ -149,7 +168,7 @@ class JobRunrExtensionProcessor {
         return UnremovableBeanBuildItem.beanTypes(DotName.createSimple(JobRequestHandler.class));
     }
 
-    @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
+    @BuildStep(onlyIf = NativeBuild.class)
     void registerForReflection(
             BuildProducer<ReflectiveClassBuildItem> reflectiveClassProducer,
             CombinedIndexBuildItem indexBuildItem
@@ -215,12 +234,21 @@ class JobRunrExtensionProcessor {
     }
 
     private Class<?> jsonMapper(Capabilities capabilities) {
+        // Unfortunately, there is no Capability.KOTLIN_SERIALIZATION.
+        if (isKotlinxSerializationAndJobRunrKotlinSupportPresent()) {
+            return JobRunrProducer.JobRunrKotlinxSerializataionJsonMapperProducer.class;
+        }
         if (capabilities.isPresent(Capability.JACKSON)) {
             return JobRunrProducer.JobRunrJacksonJsonMapperProducer.class;
-        } else if (capabilities.isPresent(Capability.JSONB)) {
+        }
+        if (capabilities.isPresent(Capability.JSONB)) {
             return JobRunrProducer.JobRunrJsonBJsonMapperProducer.class;
         }
-        throw new IllegalStateException("Either JSON-B or Jackson should be added via a Quarkus extension");
+        throw new IllegalStateException("Either kotlinx.serialization + jobrunr-kotlin-x-support should be in the classpath or JSON-B/Jackson should be added as a Quarkus extension");
+    }
+
+    protected boolean isKotlinxSerializationAndJobRunrKotlinSupportPresent() {
+        return classExists("kotlinx.serialization.json.Json") && classExists("org.jobrunr.kotlin.utils.mapper.KotlinxSerializationJsonMapper");
     }
 
     private Set<Class<?>> storageProvider(Capabilities capabilities, JobRunrBuildTimeConfiguration jobRunrBuildTimeConfiguration) {

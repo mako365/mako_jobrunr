@@ -7,20 +7,17 @@ plugins {
 }
 
 compileJava {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
     options.release = 17
 }
 
 compileTestJava {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    options.release = 17
 }
 
 dependencies {
     api platform(project(':platform'))
-    api platform('org.springframework.boot:spring-boot-dependencies:3.4.4')
-    annotationProcessor platform('org.springframework.boot:spring-boot-dependencies:3.4.4')
+    api platform('org.springframework.boot:spring-boot-dependencies:3.5.5')
+    annotationProcessor platform('org.springframework.boot:spring-boot-dependencies:3.5.5')
 
     api project(':core')
     api 'org.springframework.boot:spring-boot-starter'
@@ -33,23 +30,20 @@ dependencies {
     compileOnly 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     compileOnly 'com.google.code.gson:gson'
     compileOnly 'org.eclipse:yasson'
+    compileOnly 'org.jetbrains.kotlinx:kotlinx-serialization-json'
+    compileOnly project(':language-support:jobrunr-kotlin-22-support')
 
-    compileOnly 'org.springframework.data:spring-data-redis'
-    compileOnly 'redis.clients:jedis'
-    compileOnly 'io.lettuce:lettuce-core'
     compileOnly 'org.mongodb:mongodb-driver-sync'
-    compileOnly 'co.elastic.clients:elasticsearch-java'
 
     testImplementation testFixtures(project(":core"))
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-actuator'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'
     testImplementation 'com.google.code.gson:gson'
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-serialization-json'
+    testImplementation project(':language-support:jobrunr-kotlin-22-support')
     testImplementation 'org.springframework.data:spring-data-redis'
-    testImplementation 'redis.clients:jedis'
-    testImplementation 'io.lettuce:lettuce-core'
     testImplementation 'org.mongodb:mongodb-driver-sync'
-    testImplementation 'co.elastic.clients:elasticsearch-java'
     testImplementation 'io.micrometer:micrometer-core'
 }
 
@@ -89,7 +83,7 @@ publishing {
             from components.java
 
             pom {
-                name = 'JobRunr Spring Boot Native'
+                name = 'JobRunr Spring Boot 3 Starter'
                 description = 'An easy way to perform background processing on the JVM. Backed by persistent storage. Open and free for commercial use.'
                 url = 'https://github.com/jobrunr/jobrunr'
                 licenses {

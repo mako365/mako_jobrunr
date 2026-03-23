@@ -1,6 +1,7 @@
 import java.text.SimpleDateFormat
 
 plugins {
+    id 'com.github.ben-manes.versions' version '0.53.0'
     id 'java-library'
     id 'java-test-fixtures'
     id 'maven-publish'
@@ -21,13 +22,13 @@ sourceSets {
     }
 }
 
-task myJavadocs(type: Javadoc) {
+tasks.register('myJavadocs', Javadoc) {
     source = sourceSets.main.allJava
     classpath = project.sourceSets.main.compileClasspath
     options.links 'https://docs.oracle.com/en/java/javase/11/docs/api/'
 }
 
-task runFrontEndDevelopment(type: JavaExec) {
+tasks.register('runFrontEndDevelopment', JavaExec) {
     group = "Execution"
     description = "Run the FrontEnd Development JavaExecTask"
     classpath = sourceSets.test.runtimeClasspath
@@ -48,10 +49,7 @@ dependencies {
     compileOnly 'io.micrometer:micrometer-core'
 
     compileOnly 'com.oracle.database.jdbc:ojdbc8'
-    compileOnly 'redis.clients:jedis'
-    compileOnly 'io.lettuce:lettuce-core'
     compileOnly 'org.mongodb:mongodb-driver-sync'
-    compileOnly 'co.elastic.clients:elasticsearch-java'
 
     testImplementation 'org.ow2.asm:asm-util'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'
@@ -61,14 +59,14 @@ dependencies {
     testImplementation 'org.eclipse:yasson'
     testImplementation 'io.micrometer:micrometer-core'
     testImplementation 'org.testcontainers:testcontainers'
-    testImplementation 'org.testcontainers:junit-jupiter'
-    testImplementation 'org.testcontainers:mariadb'
-    testImplementation 'org.testcontainers:mssqlserver'
-    testImplementation 'org.testcontainers:mysql'
-    testImplementation 'org.testcontainers:oracle-free'
-    testImplementation 'org.testcontainers:postgresql'
-    testImplementation 'org.testcontainers:db2'
-    testImplementation 'org.testcontainers:elasticsearch'
+    testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
+    testImplementation 'org.testcontainers:testcontainers-mariadb'
+    testImplementation 'org.testcontainers:testcontainers-mssqlserver'
+    testImplementation 'org.testcontainers:testcontainers-mysql'
+    testImplementation 'org.testcontainers:testcontainers-oracle-free'
+    testImplementation 'org.testcontainers:testcontainers-postgresql'
+    testImplementation 'org.testcontainers:testcontainers-db2'
+    testImplementation 'org.testcontainers:testcontainers-mongodb'
     testImplementation 'org.xerial:sqlite-jdbc'
     testImplementation 'com.h2database:h2'
     testImplementation 'org.postgresql:postgresql'
@@ -77,20 +75,18 @@ dependencies {
     testImplementation 'com.ibm.db2:jcc'
     testImplementation 'com.oracle.database.jdbc:ojdbc8'
     testImplementation 'org.mariadb.jdbc:mariadb-java-client'
-    testImplementation 'mysql:mysql-connector-java'
+    testImplementation 'com.mysql:mysql-connector-j'
     testImplementation 'com.zaxxer:HikariCP'
     testImplementation 'org.apache.commons:commons-dbcp2'
     testImplementation 'io.agroal:agroal-pool'
     testImplementation 'org.apache.tomcat:tomcat-jdbc'
-    testImplementation 'redis.clients:jedis'
-    testImplementation 'io.lettuce:lettuce-core'
     testImplementation 'org.mongodb:mongodb-driver-sync'
-    testImplementation 'co.elastic.clients:elasticsearch-java'
+    testImplementation 'org.wiremock:wiremock'
 
     testFixturesApi 'org.junit.jupiter:junit-jupiter'
-    testFixturesApi 'org.assertj:assertj-core'
     testFixturesApi 'org.mockito:mockito-inline'
     testFixturesApi 'org.mockito:mockito-junit-jupiter'
+    testFixturesApi 'org.assertj:assertj-core'
     testFixturesApi 'io.github.artsok:rerunner-jupiter'
     testFixturesApi 'org.awaitility:awaitility'
     testFixturesApi 'net.javacrumbs.json-unit:json-unit-assertj'
@@ -103,9 +99,12 @@ java {
     withSourcesJar()
 }
 
+compileJava {
+    options.release = 8
+}
+
 compileTestFixturesJava {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    options.release = 11
 }
 
 normalization {
@@ -115,31 +114,38 @@ normalization {
     }
 }
 
-//task npmRunBuild() {
-//    inputs.dir('src/main/resources/org/jobrunr/dashboard/frontend/src').withPathSensitivity(PathSensitivity.RELATIVE)
-//    outputs.dir('src/main/resources/org/jobrunr/dashboard/frontend/build')
+//tasks.register('npmInstall', Exec) {
+//    workingDir = file('src/main/resources/org/jobrunr/dashboard/frontend')
+//    commandLine 'npm', 'install'
+//    inputs.file('src/main/resources/org/jobrunr/dashboard/frontend/package.json')
+//    outputs.dir('src/main/resources/org/jobrunr/dashboard/frontend/node_modules')
 //    outputs.cacheIf { true }
-//
-//    doLast {
-//        println "JobRunr Frontend Build started"
-//        exec {
-//            workingDir = new File(projectDir, 'src/main/resources/org/jobrunr/dashboard/frontend')
-//            commandLine 'sh', '-c', 'npm install'
-//        }
-//        exec {
-//            workingDir = new File(projectDir, 'src/main/resources/org/jobrunr/dashboard/frontend')
-//            commandLine 'sh', '-c', 'npm run build'
-//        }
-//        println "JobRunr Frontend Build succeeded"
-//    }
 //}
 //
-//processResources.dependsOn npmRunBuild
-//sourcesJar.dependsOn npmRunBuild
+//tasks.register('npmRunBuild', Exec) {
+//    dependsOn 'npmInstall'
+//    workingDir = file('src/main/resources/org/jobrunr/dashboard/frontend')
+//    commandLine 'npm', 'run', 'build'
+//    inputs.dir('src/main/resources/org/jobrunr/dashboard/frontend/src').withPathSensitivity(PathSensitivity.RELATIVE)
+//    inputs.file('src/main/resources/org/jobrunr/dashboard/frontend/package.json')
+//    outputs.dir('src/main/resources/org/jobrunr/dashboard/frontend/build')
+//    outputs.cacheIf { true }
+//}
+//
+//tasks.register('npmRunTest', Exec) {
+//    dependsOn 'npmInstall'
+//    workingDir = file('src/main/resources/org/jobrunr/dashboard/frontend')
+//    commandLine 'npm', 'run', 'test'
+//    inputs.dir('src/main/resources/org/jobrunr/dashboard/frontend/src').withPathSensitivity(PathSensitivity.RELATIVE)
+//    inputs.file('src/main/resources/org/jobrunr/dashboard/frontend/package.json')
+//    outputs.dir('/tmp/reports/core/frontend')
+//    outputs.cacheIf { true }
+//}
 
 jar {
-    var asmJar = configurations.compileClasspath.fileCollection { it.group == 'org.ow2.asm' && it.name == 'asm' }.singleFile.name
-    var asmVersion = asmJar.substring(asmJar.lastIndexOf("-") + 1).replace(".jar", "")
+    def asmVersion = configurations.compileClasspath.incoming.resolutionResult.allComponents.find {
+        it.moduleVersion?.group == 'org.ow2.asm' && it.moduleVersion.name == 'asm'
+    }?.moduleVersion?.version
     exclude('**/dependency-check-bin/', '**/dependency-check-reports/')
     manifest {
         attributes 'Automatic-Module-Name': 'org.jobrunr.core'
@@ -234,10 +240,7 @@ signing {
 }
 
 def getGitBranch() {
-    def stdout = new ByteArrayOutputStream()
-    exec {
+    return providers.exec {
         commandLine 'git', 'rev-parse', '--abbrev-ref', 'HEAD'
-        standardOutput = stdout
-    }
-    return stdout.toString().trim()
+    }.standardOutput.asText.get().trim()
 }

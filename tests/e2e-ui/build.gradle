@@ -2,14 +2,11 @@ plugins {
 }
 
 compileJava {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
-    options.release = 11
+    options.release = 17
 }
 
 compileTestJava {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    options.release = 17
 }
 
 dependencies {
@@ -18,6 +15,8 @@ dependencies {
     implementation 'ch.qos.logback:logback-classic'
 
     testImplementation project(':core')
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-serialization-json'
+    testImplementation project(':language-support:jobrunr-kotlin-22-support')
     testImplementation 'com.google.code.gson:gson'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
@@ -29,7 +28,7 @@ dependencies {
     testImplementation 'org.assertj:assertj-core'
     testImplementation 'com.microsoft.playwright:playwright'
     testImplementation 'org.testcontainers:testcontainers'
-    testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.testcontainers:testcontainers-postgresql'
 }
 
 sonar {

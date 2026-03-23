@@ -3,6 +3,7 @@ package org.jobrunr.server.metrics;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.cumulative.CumulativeFunctionCounter;
+import io.micrometer.core.instrument.internal.DefaultGauge;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.jobrunr.JobRunrAssertions;
 import org.jobrunr.server.BackgroundJobServer;
@@ -12,10 +13,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.Instant;
 import java.util.List;
 
+import static java.time.Instant.now;
 import static java.util.UUID.randomUUID;
+import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.jobrunr.storage.BackgroundJobServerStatusTestBuilder.aDefaultBackgroundJobServerStatus;
 import static org.jobrunr.stubs.Mocks.ofBackgroundJobServer;
@@ -37,23 +39,45 @@ class BackgroundJobServerMetricsBinderTest {
     @Test
     void testBinder() {
         try (var ignored = new BackgroundJobServerMetricsBinder(backgroundJobServer, simpleMeterRegistry)) {
-
             verify(simpleMeterRegistry, times(2)).more();
+
+            List<Meter> meters = simpleMeterRegistry.getMeters();
+            assertThat(meters).hasSize(10);
+        }
+    }
+
+    @Test
+    void testBinderCachesValues() {
+        when(backgroundJobServer.getServerStatus()).thenReturn(aDefaultBackgroundJobServerStatus().build());
+
+        try (var ignored = new BackgroundJobServerMetricsBinder(backgroundJobServer, simpleMeterRegistry)) {
+            List<DefaultGauge> gauges = simpleMeterRegistry.getMeters().stream()
+                    .filter(DefaultGauge.class::isInstance)
+                    .map(DefaultGauge.class::cast)
+                    .collect(toList());
+
+            assertThat(gauges)
+                    .hasSize(8)
+                    .allSatisfy(gauge -> {
+                        Double value1 = gauge.value();
+                        Double value2 = gauge.value();
+                        assertThat(value1).isEqualTo(value2);
+                    });
         }
     }
 
     @Test
     void getMetersReturnsBackgroundJobServerMetricsWhenBackgroundJobServerIsRunning() {
-        var firstHeartBeat = Instant.now().minusSeconds(60);
-        var lastHeartBeat = Instant.now();
+        var firstHeartBeat = now().minusSeconds(60);
+        var lastHeartBeat = now();
         var serverStatus = aDefaultBackgroundJobServerStatus()
                 .withId(backgroundJobServer.getId())
                 .withFirstHeartbeat(firstHeartBeat)
                 .withLastHeartbeat(lastHeartBeat)
+                .withRunning(true)
                 .build();
         when(backgroundJobServer.getServerStatus()).thenReturn(serverStatus);
-        when(backgroundJobServer.isRunning()).thenReturn(true);
-        try (var ignored = new BackgroundJobServerMetricsBinder(backgroundJobServer, simpleMeterRegistry)) {
+        try (var ignored1 = new BackgroundJobServerMetricsBinder(backgroundJobServer, simpleMeterRegistry)) {
 
             // WHEN
             List<Meter> meters = simpleMeterRegistry.getMeters();
@@ -69,8 +93,8 @@ class BackgroundJobServerMetricsBinderTest {
             assertThat(getGauge(meters, "jobrunr.background-job-server.process-free-memory").value()).isEqualTo((double) serverStatus.getProcessFreeMemory());
             assertThat(getGauge(meters, "jobrunr.background-job-server.system-free-memory").value()).isEqualTo((double) serverStatus.getSystemFreeMemory());
             assertThat(getGauge(meters, "jobrunr.background-job-server.system-total-memory").value()).isEqualTo((double) serverStatus.getSystemTotalMemory());
-            assertThat(getGauge(meters, "jobrunr.background-job-server.first-heartbeat").value()).isEqualTo(firstHeartBeat.getEpochSecond());
-            assertThat(getGauge(meters, "jobrunr.background-job-server.last-heartbeat").value()).isEqualTo(lastHeartBeat.getEpochSecond());
+            assertThat(getGauge(meters, "jobrunr.background-job-server.first-heartbeat").value()).isEqualTo((double) firstHeartBeat.getEpochSecond());
+            assertThat(getGauge(meters, "jobrunr.background-job-server.last-heartbeat").value()).isEqualTo((double) lastHeartBeat.getEpochSecond());
             assertThat(getGauge(meters, "jobrunr.background-job-server.system-cpu-load").value()).isEqualTo((double) serverStatus.getSystemCpuLoad());
             assertThat(getGauge(meters, "jobrunr.background-job-server.process-cpu-load").value()).isEqualTo((double) serverStatus.getProcessCpuLoad());
         }
@@ -84,7 +108,6 @@ class BackgroundJobServerMetricsBinderTest {
                 .withLastHeartbeat(null)
                 .build();
         when(backgroundJobServer.getServerStatus()).thenReturn(serverStatus);
-        when(backgroundJobServer.isRunning()).thenReturn(false);
         try (var ignored = new BackgroundJobServerMetricsBinder(backgroundJobServer, simpleMeterRegistry)) {
 
             // WHEN

@@ -21,11 +21,17 @@ public class Exceptions {
         return sw.toString();
     }
 
+    /**
+     * A {@link Supplier} that can throw checked Exceptions.
+     */
     @FunctionalInterface
     public interface ThrowingSupplier<T> {
         T get() throws Exception;
     }
 
+    /**
+     * A {@link Runnable} that can throw checked Exceptions.
+     */
     @FunctionalInterface
     public interface ThrowingRunnable {
         void run() throws Exception;

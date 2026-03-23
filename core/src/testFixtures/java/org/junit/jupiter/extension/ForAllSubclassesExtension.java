@@ -2,6 +2,7 @@ package org.junit.jupiter.extension;
 
 import org.jobrunr.utils.reflection.ReflectionUtils;
 import org.jobrunr.utils.resources.ClassPathResourceProvider;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,7 +21,7 @@ import static java.util.stream.Collectors.toList;
 public class ForAllSubclassesExtension implements BeforeAllCallback, AfterAllCallback {
 
     private static AtomicInteger atomicInteger;
-    private static Class annotatedTestClass;
+    private static Class<?> annotatedTestClass;
     private static Method setUpMethod;
     private static Method tearDownMethod;
 
@@ -29,15 +30,15 @@ public class ForAllSubclassesExtension implements BeforeAllCallback, AfterAllCal
         if (atomicInteger != null) return;
 
         annotatedTestClass = findClassWithForAllSubclassesAnnotation(context);
-        setUpMethod = findMethodWithAnnotation(annotatedTestClass, BeforeAllSubclasses.class);
-        tearDownMethod = findMethodWithAnnotation(annotatedTestClass, AfterAllSubclasses.class);
+        setUpMethod = findMethodWithAnnotation(BeforeAllSubclasses.class);
+        tearDownMethod = findMethodWithAnnotation(AfterAllSubclasses.class);
 
-        try(ClassPathResourceProvider resourceProvider = new ClassPathResourceProvider()) {
+        try (ClassPathResourceProvider resourceProvider = new ClassPathResourceProvider()) {
             final List<Path> paths = resourceProvider.listAllChildrenOnClasspath(annotatedTestClass).collect(toList());
             final int count = (int) paths.stream()
                     .filter(path -> path.toString().endsWith(".class"))
                     .map(ReflectionUtils::toClassFromPath)
-                    .filter(c -> annotatedTestClass.isAssignableFrom(c) && !Modifier.isAbstract(c.getModifiers()))
+                    .filter(ForAllSubclassesExtension::isRunningTestSubclass)
                     .count();
             atomicInteger = new AtomicInteger(count);
 
@@ -76,10 +77,14 @@ public class ForAllSubclassesExtension implements BeforeAllCallback, AfterAllCal
         return findClassWithForAllSubclassesAnnotation(clazz.getSuperclass());
     }
 
-    private static Method findMethodWithAnnotation(Class clazz, Class<? extends Annotation> annotation) {
+    private static Method findMethodWithAnnotation(Class<? extends Annotation> annotation) {
         return Arrays.stream(annotatedTestClass.getDeclaredMethods())
                 .filter(method -> method.isAnnotationPresent(annotation))
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("Exactly one method should be annotated with " + annotation.getSimpleName()));
+    }
+
+    private static boolean isRunningTestSubclass(Class<Object> c) {
+        return annotatedTestClass.isAssignableFrom(c) && !Modifier.isAbstract(c.getModifiers()) && !c.isAnnotationPresent(Disabled.class);
     }
 }

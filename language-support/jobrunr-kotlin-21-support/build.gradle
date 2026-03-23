@@ -1,14 +1,19 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
-    id 'com.github.ben-manes.versions' version '0.51.0'
+    id 'com.github.ben-manes.versions' version '0.53.0'
     id 'java-library'
     id 'maven-publish'
     id 'signing'
-    id 'org.jetbrains.kotlin.jvm' version '2.1.20'
+    id 'org.jetbrains.kotlin.jvm' version '2.1.21'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '2.1.0'
 }
 
 dependencies {
     api project(':core')
     compileOnly 'io.insert-koin:koin-core'
+    compileOnly 'org.jetbrains.kotlinx:kotlinx-serialization-json'
 
     testImplementation project(':core')
     testImplementation testFixtures(project(":core"))
@@ -16,12 +21,28 @@ dependencies {
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     testImplementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
+
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-serialization-json'
 }
 
-tasks.named("dependencyUpdates").configure {
+dependencyUpdates {
     rejectVersionIf {
-        !it.candidate.version.startsWith('2.1')
+        it.candidate.group.startsWith('org.jetbrains.kotlin') && !it.candidate.version.startsWith('2.1')
     }
+}
+
+compileJava {
+    options.release = 8
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_1_8
+    }
+}
+
+tasks.named('compileTestKotlin', KotlinCompile) {
+    compilerOptions.jvmTarget.set(JvmTarget.JVM_21)
 }
 
 java {
@@ -34,14 +55,6 @@ normalization {
         ignore '**/MANIFEST.MF'
         ignore '**/frontend/**'
     }
-}
-
-compileKotlin {
-    kotlinOptions.jvmTarget = "1.8"
-}
-
-compileTestKotlin {
-    kotlinOptions.jvmTarget = "11"
 }
 
 publishing {
@@ -88,10 +101,10 @@ publishing {
                 withXml {
                     def pomNode = asNode()
                     pomNode.remove(pomNode.dependencyManagement)
-                    pomNode.dependencies.'*'.findAll() {
-                        it.optional.text() == 'true'
-                    }.each() {
-                        it.parent().remove(it)
+                    pomNode.dependencies.'*'.each() {
+                        if (it.optional.text() == 'true') {
+                            it.parent().remove(it)
+                        }
                     }
                 }
             }

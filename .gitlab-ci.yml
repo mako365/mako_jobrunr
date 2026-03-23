@@ -9,10 +9,10 @@
 # https://gradle.org/
 # https://github.com/gradle/gradle
 
-image: gradle:8-jdk17-alpine
+image: gradle:8-jdk21-alpine
 
 variables:
-  DRONE_TAG: "6.7.5.3" #version number
+  DRONE_TAG: "7.8.5.1" #version number
 
 before_script:
   - GRADLE_USER_HOME="$(pwd)/.gradle"

@@ -1,10 +1,10 @@
 import {useContext, useEffect} from 'react';
 import {Typography} from "@mui/material";
-import statsState from "../../StatsStateContext";
-import {JobRunrInfoContext} from "../../JobRunrInfoContext";
+import {JobRunrInfoContext} from "../../contexts/JobRunrInfoContext";
+import {useJobStats} from "../../hooks/useJobStats";
 
 export default function VersionFooter() {
-    const stats = statsState.getStats();
+    const [stats, _] = useJobStats();
     const jobRunrInfo = useContext(JobRunrInfoContext);
 
     useEffect(() => {
@@ -24,6 +24,8 @@ export default function VersionFooter() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [jobRunrInfo]);
 
+    const totalSucceededJobs = stats.succeeded + stats.allTimeSucceeded;
+
     return (
         <>
             <Typography
@@ -31,7 +33,7 @@ export default function VersionFooter() {
                 style={{paddingTop: '1rem', width: '100%', display: 'inline-block'}}
                 variant="caption"
             >
-                Processed {(stats.succeeded + stats.allTimeSucceeded)} jobs with <span
+                Processed {(!isNaN(totalSucceededJobs) ? totalSucceededJobs : "?")} jobs with <span
                 style={{color: 'red'}}>♥</span> using
                 JobRunr {jobRunrInfo.version}.<br/>
                 Support open-source development and <a href="https://www.jobrunr.io/en/about/#eco-friendly-software"

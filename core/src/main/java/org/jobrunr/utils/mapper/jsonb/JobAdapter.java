@@ -21,7 +21,6 @@ import org.jobrunr.utils.mapper.jsonb.serializer.PathTypeDeserializer;
 import org.jobrunr.utils.mapper.jsonb.serializer.PathTypeSerializer;
 
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -42,7 +41,7 @@ public class JobAdapter implements JsonbAdapter<Job, JsonObject> {
                 .withDeserializers(new PathTypeDeserializer(), new FileTypeDeserializer(), new DurationTypeDeserializer())
         );
         this.jsonb = new JobRunrJsonb(jsonb);
-        this.jobLabelsAdapter = new JobLabelsAdapter(this.jsonb);
+        this.jobLabelsAdapter = new JobLabelsAdapter();
         this.jobDetailsAdapter = new JobDetailsAdapter(this.jsonb);
         this.jobHistoryAdapter = new JobHistoryAdapter(this.jsonb);
         this.jobMetadataAdapter = new JobMetadataAdapter(this.jsonb);
@@ -69,7 +68,7 @@ public class JobAdapter implements JsonbAdapter<Job, JsonObject> {
     public Job adaptFromJson(JsonObject jsonObject) throws Exception {
         final UUID id = jsonObject.isNull("id") ? null : UUID.fromString(jsonObject.getString("id"));
         final int version = jsonObject.getInt("version", 0);
-        final Set<String> jobLabels = jobLabelsAdapter.adaptFromJson(jsonObject.getJsonArray("labels"));
+        final List<String> jobLabels = jobLabelsAdapter.adaptFromJson(jsonObject.getJsonArray("labels"));
         final JobDetails jobDetails = jobDetailsAdapter.adaptFromJson(jsonObject.getJsonObject("jobDetails"));
         final List<JobState> jobHistory = jobHistoryAdapter.adaptFromJson(jsonObject.getJsonArray("jobHistory"));
         final ConcurrentHashMap<String, Object> jobMetadata = jobMetadataAdapter.adaptFromJson(jsonObject.getJsonObject("metadata"));
