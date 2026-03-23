@@ -12,7 +12,7 @@
 image: gradle:8-jdk17-alpine
 
 variables:
-  DRONE_TAG: "3.7.5.1" #version number
+  DRONE_TAG: "7.8.5.1" #version number
 
 before_script:
   - GRADLE_USER_HOME="$(pwd)/.gradle"

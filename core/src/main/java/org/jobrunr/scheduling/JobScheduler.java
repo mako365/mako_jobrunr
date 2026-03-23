@@ -11,6 +11,7 @@ import org.jobrunr.jobs.lambdas.IocJobLambda;
 import org.jobrunr.jobs.lambdas.IocJobLambdaFromStream;
 import org.jobrunr.jobs.lambdas.JobLambda;
 import org.jobrunr.jobs.lambdas.JobLambdaFromStream;
+import org.jobrunr.jobs.states.ScheduledState;
 import org.jobrunr.scheduling.carbonaware.CarbonAwarePeriod;
 import org.jobrunr.scheduling.interval.Interval;
 import org.jobrunr.storage.StorageProvider;
@@ -325,6 +326,27 @@ public class JobScheduler extends AbstractJobScheduler {
     public <S> JobId schedule(UUID id, Temporal scheduleAt, IocJobLambda<S> iocJob) {
         JobDetails jobDetails = jobDetailsGenerator.toJobDetails(iocJob);
         return schedule(id, scheduleAt, jobDetails);
+    }
+
+    /**
+     * Creates new fire-and-forget jobs for each item in the input stream using the lambda
+     * passed as {@code jobFromStream} and schedules it to be enqueued at the given moment of time.
+     * <h5>An example:</h5>
+     * <pre>{@code
+     *      MyService service = new MyService();
+     *      Stream<UUID> workStream = getWorkStream();
+     *      jobScheduler.enqueue(workStream, ZonedDateTime.now().plusHours(5), (uuid) -> service.doWork(uuid));
+     * }</pre>
+     *
+     * @param input         the stream of items for which to create fire-and-forget jobs
+     * @param scheduleAt    the moment in time at which the job will be enqueued.
+     * @param jobFromStream the lambda which defines the fire-and-forget job to create for each item in the {@code input}
+     */
+    public <T> void schedule(Stream<T> input, Temporal scheduleAt, JobLambdaFromStream<T> jobFromStream) {
+        input
+                .map(x -> jobDetailsGenerator.toJobDetails(x, jobFromStream))
+                .map(jobDetails -> new Job(null, jobDetails, new ScheduledState(Instant.from(scheduleAt))))
+                .collect(batchCollector(BATCH_SIZE, this::saveJobs));
     }
 
     /**

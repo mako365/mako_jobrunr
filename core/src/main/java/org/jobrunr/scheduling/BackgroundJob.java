@@ -284,6 +284,25 @@ public class BackgroundJob {
     }
 
     /**
+     * Creates new fire-and-forget jobs for each item in the input stream using the lambda
+     * passed as {@code jobFromStream} and schedules it to be enqueued at the given moment of time.
+     * <h5>An example:</h5>
+     * <pre>{@code
+     *      MyService service = new MyService();
+     *      Stream<UUID> workStream = getWorkStream();
+     *      BackgroundJob.schedule(workStream, ZonedDateTime.now().plusHours(5), (uuid) -> service.doWork(uuid));
+     * }</pre>
+     *
+     * @param input         the stream of items for which to create fire-and-forget jobs
+     * @param scheduleAt    The moment in time at which the job will be enqueued. It will use the systemDefault ZoneId to transform it to an UTC Instant
+     * @param jobFromStream the lambda which defines the fire-and-forget job to create for each item in the {@code input}
+     */
+    public static <T> void schedule(Stream<T> input, Temporal scheduleAt, JobLambdaFromStream<T> jobFromStream) {
+        verifyJobScheduler();
+        jobScheduler.schedule(input, scheduleAt, jobFromStream);
+    }
+
+    /**
      * Deletes a job and sets its state to DELETED. If the job is being processed, it will be interrupted.
      *
      * @param id the id of the job
