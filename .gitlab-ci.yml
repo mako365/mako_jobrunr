@@ -54,7 +54,7 @@ build:
     - job: build dashboard frontend
 
 deploy:
-  image: gradle:8-jdk17-alpine
+  image: gradle:8-jdk21-alpine
   stage: deploy
   script:
     - 'gradle publish'
