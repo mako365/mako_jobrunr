@@ -32,6 +32,7 @@ import java.util.stream.Stream;
 import static java.time.ZoneId.systemDefault;
 import static java.util.Collections.emptyList;
 import static org.jobrunr.storage.StorageProvider.BATCH_SIZE;
+import static org.jobrunr.utils.InstantUtils.toInstant;
 import static org.jobrunr.utils.streams.StreamUtils.batchCollector;
 
 /**
@@ -345,7 +346,7 @@ public class JobScheduler extends AbstractJobScheduler {
     public <T> void schedule(Stream<T> input, Temporal scheduleAt, JobLambdaFromStream<T> jobFromStream) {
         input
                 .map(x -> jobDetailsGenerator.toJobDetails(x, jobFromStream))
-                .map(jobDetails -> new Job(null, jobDetails, new ScheduledState(Instant.from(scheduleAt))))
+                .map(jobDetails -> new Job(null, jobDetails, new ScheduledState(toInstant(scheduleAt))))
                 .collect(batchCollector(BATCH_SIZE, this::saveJobs));
     }
 
