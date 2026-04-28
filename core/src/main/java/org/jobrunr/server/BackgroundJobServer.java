@@ -19,7 +19,6 @@ import org.jobrunr.server.strategy.WorkDistributionStrategy;
 import org.jobrunr.server.tasks.startup.CheckIfAllJobsExistTask;
 import org.jobrunr.server.tasks.startup.CreateClusterIdIfNotExists;
 import org.jobrunr.server.tasks.startup.MigrateFromV5toV6Task;
-import org.jobrunr.server.tasks.startup.ShutdownExecutorServiceTask;
 import org.jobrunr.server.tasks.startup.StartupTask;
 import org.jobrunr.server.tasks.zookeeper.DeleteDeletedJobsPermanentlyTask;
 import org.jobrunr.server.tasks.zookeeper.DeleteSucceededJobsTask;
@@ -310,8 +309,10 @@ public class BackgroundJobServer implements BackgroundJobServerMBean {
         long delay = min(configuration.getPollInterval().toMillis() / 5, 1000);
         JobZooKeeper recurringAndCarbonAwareAndScheduledJobsZooKeeper = new JobZooKeeper(this,
                 new ProcessRecurringJobsTask(this), new ProcessCarbonAwareAwaitingJobsTask(this), new ProcessScheduledJobsTask(this));
+        JobZooKeeper orphanedJobsZooKeeper = new JobZooKeeper(this, new ProcessOrphanedJobsTask(this));
         JobZooKeeper janitorZooKeeper = new JobZooKeeper(this, new DeleteSucceededJobsTask(this), new DeleteDeletedJobsPermanentlyTask(this));
         zookeeperThreadPool.scheduleWithFixedDelay(recurringAndCarbonAwareAndScheduledJobsZooKeeper, delay, configuration.getPollInterval().toMillis(), MILLISECONDS);
+        zookeeperThreadPool.scheduleWithFixedDelay(orphanedJobsZooKeeper, delay, configuration.getPollInterval().toMillis(), MILLISECONDS);
         zookeeperThreadPool.scheduleWithFixedDelay(janitorZooKeeper, delay, configuration.getPollInterval().toMillis(), MILLISECONDS);
     }
 
@@ -334,16 +335,17 @@ public class BackgroundJobServer implements BackgroundJobServerMBean {
     }
 
     private void runStartupTasks() {
+        ExecutorService startupTasksExecutor = Executors.newSingleThreadExecutor();
         try {
-            ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
-            singleThreadExecutor.execute(new StartupTask(
+            startupTasksExecutor.execute(new StartupTask(
                     new CreateClusterIdIfNotExists(this),
                     new CheckIfAllJobsExistTask(this),
-                    new MigrateFromV5toV6Task(this),
-                    new ShutdownExecutorServiceTask(singleThreadExecutor)
+                    new MigrateFromV5toV6Task(this)
             ));
         } catch (Exception notImportant) {
             // server is shut down immediately
+        } finally {
+            startupTasksExecutor.shutdown();
         }
     }
 

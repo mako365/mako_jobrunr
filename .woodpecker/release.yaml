@@ -2,6 +2,10 @@ when:
   event:
     - tag
 
+
+workspace:
+  path: jobrunr/src
+
 steps:
   - name: prepare-docker-build-container
     image: docker
@@ -21,7 +25,7 @@ steps:
       - |
         bash -lc '
           set -e -o pipefail
-          gradle --no-daemon -Djib.console=plain --info clean assemble publishToSonatype nexusPushFromStagingToCentral \
+          gradle --no-daemon -Djib.console=plain --info clean assemble core:uiBuildOutputVerification publishToSonatype nexusPushFromStagingToCentral \
             | grep -Ev "^(Found locally available resource with matching checksum|BuildToolsApiClasspathEntrySnapshotTransform|ClasspathEntrySnapshotTransform|Resource missing\\.)"
         '
     environment:

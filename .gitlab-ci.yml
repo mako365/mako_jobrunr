@@ -12,7 +12,7 @@
 image: gradle:8-jdk21-alpine
 
 variables:
-  DRONE_TAG: "7.8.5.1" #version number
+  DRONE_TAG: "8.8.5.2" #version number
 
 before_script:
   - GRADLE_USER_HOME="$(pwd)/.gradle"
@@ -39,19 +39,19 @@ build dashboard frontend:
   tags:
     - docker
 
-build:
-  before_script:
-    - cd ${CI_PROJECT_DIR}
-  stage: build
-  script: ./gradlew clean build -x test
-  cache:
-    key: "$CI_COMMIT_REF_NAME"
-    policy: push
-    paths:
-      - build
-      - .gradle
-  needs:
-    - job: build dashboard frontend
+  build:
+before_script:
+  - cd ${CI_PROJECT_DIR}
+stage: build
+script: ./gradlew clean build -x test
+cache:
+  key: "$CI_COMMIT_REF_NAME"
+  policy: push
+  paths:
+    - build
+    - .gradle
+needs:
+  - job: build dashboard frontend
 
 deploy:
   image: gradle:8-jdk21-alpine

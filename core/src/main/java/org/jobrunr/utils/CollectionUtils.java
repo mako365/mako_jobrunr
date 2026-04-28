@@ -39,6 +39,7 @@ public class CollectionUtils {
         return someArray.length < 1;
     }
 
+    @SafeVarargs
     public static <T> List<T> asList(T[] array, T... params) {
         List<T> result = new ArrayList<>();
         result.addAll(Arrays.asList(array));
@@ -55,10 +56,12 @@ public class CollectionUtils {
         return result;
     }
 
+    @SafeVarargs
     public static <T> Set<T> asSet(T... items) {
         return Stream.of(items).collect(toSet());
     }
 
+    @SafeVarargs
     public static <T> Set<T> asSet(Collection<T>... existingCollections) {
         Set<T> result = new HashSet<>();
         for (Collection<T> existingCollection : existingCollections) {
@@ -84,7 +87,7 @@ public class CollectionUtils {
         if (isNullOrEmpty(items)) return null;
         return items.get(items.size() - 1);
     }
-
+    
     public static <K, V> Map<K, V> mapOf(K key1, V value1) {
         Map<K, V> result = new HashMap<>();
         result.put(key1, value1);

@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import static java.time.temporal.ChronoUnit.DAYS;
@@ -21,7 +20,7 @@ class CarbonIntensityForecastTest {
 
     @Test
     void fromExceptionHasError() {
-        var forecast = CarbonIntensityForecast.fromException(new IllegalArgumentException("whoopsie"));
+        var forecast = CarbonIntensityForecast.fromException();
         assertThat(forecast.hasError()).isTrue();
         assertThat(forecast.getApiResponseStatus().getCode()).isEqualTo("500");
         assertThat(forecast.getApiResponseStatus().getMessage()).isEqualTo("HTTP Internal Server Error");

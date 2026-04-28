@@ -4,9 +4,7 @@ import jakarta.interceptor.InvocationContext;
 import org.jobrunr.jobs.JobDetails;
 import org.jobrunr.jobs.annotations.Job;
 import org.jobrunr.jobs.context.JobContext;
-import org.jobrunr.server.runner.MockJobContext;
-import org.jobrunr.server.runner.ThreadLocalJobContext;
-import org.junit.jupiter.api.AfterEach;
+import org.jobrunr.server.runner.MockThreadLocalJobContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,8 +14,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.lang.reflect.InvocationTargetException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.times;
@@ -36,15 +32,8 @@ class AsyncJobInterceptorTest {
 
     @BeforeEach
     void setUp() {
-        interceptor = new AsyncJobInterceptor();
+        interceptor = new AsyncJobInterceptor(jobScheduler);
         Whitebox.setInternalState(interceptor, "jobScheduler", jobScheduler);
-    }
-
-    @AfterEach
-    void tearDown() throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
-        var clearMethod = ThreadLocalJobContext.class.getDeclaredMethod("clear");
-        clearMethod.setAccessible(true);
-        clearMethod.invoke(null);
     }
 
     @Test
@@ -72,12 +61,14 @@ class AsyncJobInterceptorTest {
 
     @Test
     void interceptProceedsNormallyIfJobIsAlreadyRunning() throws Exception {
-        var invocationContext = invocationContextMockFor("someMethodWithJobAnnotation", "arg1", "arg2");
-        MockJobContext.setUpJobContext(new JobContextMock("org.jobrunr.scheduling.AsyncJobInterceptorTest.someMethodWithJobAnnotation(java.lang.String,java.lang.String)"));
-        interceptor.intercept(invocationContext);
+        try (var ignored = new MockThreadLocalJobContext()) {
+            var invocationContext = invocationContextMockFor("someMethodWithJobAnnotation", "arg1", "arg2");
+            MockThreadLocalJobContext.setUpJobContext(new JobContextMock("org.jobrunr.scheduling.AsyncJobInterceptorTest.someMethodWithJobAnnotation(java.lang.String, java.lang.String)"));
+            interceptor.intercept(invocationContext);
 
-        verify(invocationContext, times(1)).proceed();
-        verify(jobScheduler, times(0)).enqueue(Mockito.isNull(), jobDetailsArgumentCaptor.capture());
+            verify(invocationContext, times(1)).proceed();
+            verify(jobScheduler, times(0)).enqueue(Mockito.isNull(), jobDetailsArgumentCaptor.capture());
+        }
     }
 
     private InvocationContext invocationContextMockFor(String methodName, Object... params) throws NoSuchMethodException {
@@ -90,7 +81,7 @@ class AsyncJobInterceptorTest {
     private static class JobContextMock extends JobContext {
         private final String jobSignature;
 
-        public JobContextMock(String signature) {
+        JobContextMock(String signature) {
             this.jobSignature = signature;
         }
 
@@ -101,11 +92,12 @@ class AsyncJobInterceptorTest {
     }
 
     private void someMethodThatIsNotAnnotatedWithJob() {
+        // used for testing
     }
 
     @Job
     private void someMethodWithJobAnnotation() {
-
+        // used for testing
     }
 
     @Job

@@ -8,10 +8,10 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.LinkedList;
+import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -48,7 +48,7 @@ public class JobDetailsInstruction extends VisitMethodInstruction {
             final long before = System.nanoTime();
             final Object result = getObject();
             final long after = System.nanoTime();
-            if ((after - before) > 3_000_000) {
+            if (LOGGER.isWarnEnabled() && (after - before) > 3_000_000) {
                 LOGGER.warn("You are using a custom method ({}.{}({})) while enqueueing that takes a lot of time. See https://www.jobrunr.io/en/documentation/background-methods/best-practices/ on how to use JobRunr effectively.", getClassName(), getMethodName(), Stream.of(findParamTypesFromDescriptorAsArray(descriptor)).map(Class::getSimpleName).collect(joining(", ")));
             }
             return result;
@@ -61,9 +61,9 @@ public class JobDetailsInstruction extends VisitMethodInstruction {
             return findInheritedClassName(className).orElse(className);
         }
 
-        ListIterator objectOnStackIterator = jobDetailsBuilder.getStack().listIterator(jobDetailsBuilder.getStack().size());
-        while (objectOnStackIterator.hasPrevious()) {
-            Object jobOnStack = objectOnStackIterator.previous();
+        Iterator<Object> objectOnStackDescIterator = jobDetailsBuilder.getStack().descendingIterator();
+        while (objectOnStackDescIterator.hasNext()) {
+            Object jobOnStack = objectOnStackDescIterator.next();
             if (jobOnStack != null && !jobOnStack.getClass().isSynthetic() && !Proxy.isProxyClass(jobOnStack.getClass())) {
                 Class<Object> jobClass = toClass(className);
                 if (jobClass.isAssignableFrom(jobOnStack.getClass())) {
@@ -98,7 +98,7 @@ public class JobDetailsInstruction extends VisitMethodInstruction {
 
     protected List<JobParameter> getJobParameters() {
         final List<Class<?>> paramTypesFromDescriptor = findParamTypesFromDescriptor(descriptor);
-        final LinkedList<Class<?>> paramTypes = new LinkedList<>(paramTypesFromDescriptor);
+        final ArrayDeque<Class<?>> paramTypes = new ArrayDeque<>(paramTypesFromDescriptor);
 
         List<JobParameter> result = new ArrayList<>();
         while (!paramTypes.isEmpty()) {
