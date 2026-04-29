@@ -39,19 +39,19 @@ build dashboard frontend:
   tags:
     - docker
 
-  build:
-    before_script:
-      - cd ${CI_PROJECT_DIR}
-    stage: build
-    script: ./gradlew clean build -x test
-    cache:
-      key: "$CI_COMMIT_REF_NAME"
-      policy: push
-      paths:
-        - build
-        - .gradle
-    needs:
-      - job: build dashboard frontend
+build:
+  before_script:
+    - cd ${CI_PROJECT_DIR}
+  stage: build
+  script: ./gradlew clean build -x test
+  cache:
+    key: "$CI_COMMIT_REF_NAME"
+    policy: push
+    paths:
+      - build
+      - .gradle
+  needs:
+    - job: build dashboard frontend
 
 deploy:
   image: gradle:8-jdk21-alpine
