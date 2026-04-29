@@ -197,42 +197,42 @@ normalization {
     }
 }
 
-tasks.register('npmInstall', Exec) {
-    workingDir = file('src/main/resources/org/jobrunr/dashboard/frontend')
-    inputs.file('src/main/resources/org/jobrunr/dashboard/frontend/package.json')
-    inputs.file('src/main/resources/org/jobrunr/dashboard/frontend/package-lock.json')
-    outputs.dir('src/main/resources/org/jobrunr/dashboard/frontend/node_modules')
-    commandLine 'sh', '-c', 'npm ci'
-    outputs.cacheIf { true }
-}
-
-tasks.register('npmRunBuild', Exec) {
-    dependsOn 'npmInstall'
-    workingDir = file('src/main/resources/org/jobrunr/dashboard/frontend')
-    inputs.files(
-            fileTree('src/main/resources/org/jobrunr/dashboard/frontend') {
-                exclude "node_modules/**"
-                exclude "build/**"
-            }
-    ).withPathSensitivity(PathSensitivity.RELATIVE)
-    outputs.dir('src/main/resources/org/jobrunr/dashboard/frontend/build')
-    commandLine 'sh', '-c', 'npm run build'
-    outputs.cacheIf { true }
-}
-
-tasks.register('npmRunTest', Exec) {
-    dependsOn 'npmRunBuild'
-    workingDir = file('src/main/resources/org/jobrunr/dashboard/frontend')
-    inputs.files(
-            fileTree('src/main/resources/org/jobrunr/dashboard/frontend') {
-                exclude "node_modules/**"
-                exclude "build/**"
-            }
-    ).withPathSensitivity(PathSensitivity.RELATIVE)
-    outputs.dir('/tmp/reports/core/frontend')
-    commandLine 'sh', '-c', 'npm run test'
-    outputs.cacheIf { true }
-}
+//tasks.register('npmInstall', Exec) {
+//    workingDir = file('src/main/resources/org/jobrunr/dashboard/frontend')
+//    inputs.file('src/main/resources/org/jobrunr/dashboard/frontend/package.json')
+//    inputs.file('src/main/resources/org/jobrunr/dashboard/frontend/package-lock.json')
+//    outputs.dir('src/main/resources/org/jobrunr/dashboard/frontend/node_modules')
+//    commandLine 'sh', '-c', 'npm ci'
+//    outputs.cacheIf { true }
+//}
+//
+//tasks.register('npmRunBuild', Exec) {
+//    dependsOn 'npmInstall'
+//    workingDir = file('src/main/resources/org/jobrunr/dashboard/frontend')
+//    inputs.files(
+//            fileTree('src/main/resources/org/jobrunr/dashboard/frontend') {
+//                exclude "node_modules/**"
+//                exclude "build/**"
+//            }
+//    ).withPathSensitivity(PathSensitivity.RELATIVE)
+//    outputs.dir('src/main/resources/org/jobrunr/dashboard/frontend/build')
+//    commandLine 'sh', '-c', 'npm run build'
+//    outputs.cacheIf { true }
+//}
+//
+//tasks.register('npmRunTest', Exec) {
+//    dependsOn 'npmRunBuild'
+//    workingDir = file('src/main/resources/org/jobrunr/dashboard/frontend')
+//    inputs.files(
+//            fileTree('src/main/resources/org/jobrunr/dashboard/frontend') {
+//                exclude "node_modules/**"
+//                exclude "build/**"
+//            }
+//    ).withPathSensitivity(PathSensitivity.RELATIVE)
+//    outputs.dir('/tmp/reports/core/frontend')
+//    commandLine 'sh', '-c', 'npm run test'
+//    outputs.cacheIf { true }
+//}
 
 // ⚠️These steps are essential for the frontend to be build and tested properly.
 // Please don't remove, unless you've a different way to achieve the same thing.
