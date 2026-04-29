@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
-import static org.jobrunr.utils.StringUtils.isNotNullOrEmpty;
 import static org.jobrunr.utils.StringUtils.isNullOrEmpty;
 
 public enum ScheduleExpressionType {
@@ -33,7 +32,7 @@ public enum ScheduleExpressionType {
         if (scheduleExpression.toUpperCase().startsWith("P")) {
             return INTERVAL.createSchedule(scheduleExpression);
         }
-        if (scheduleExpression.matches(".*\\s.*")) {
+        if (scheduleExpression.trim().matches("^(\\S+(?:\\s+\\S+){4,5})(?:\\s+\\[([\\w/]+)])?$")) {
             return CRON_EXPRESSION.createSchedule(scheduleExpression);
         }
         throw new ScheduleException(scheduleExpression);

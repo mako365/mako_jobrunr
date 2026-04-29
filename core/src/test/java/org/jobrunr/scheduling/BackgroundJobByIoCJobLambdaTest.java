@@ -56,12 +56,12 @@ import static org.jobrunr.storage.Paging.AmountBasedList.ascOnUpdatedAt;
 
 public class BackgroundJobByIoCJobLambdaTest {
 
+    private static final String EVERY_SECOND = "*/1 * * * * *";
+
     private StorageProvider storageProvider;
     private BackgroundJobServer backgroundJobServer;
     private TestServiceForIoC testServiceForIoC;
     private TestServiceInterface testServiceInterface;
-
-    private static final String everySecond = "*/1 * * * * *";
 
     @BeforeEach
     public void setUpTests() {
@@ -108,6 +108,20 @@ public class BackgroundJobByIoCJobLambdaTest {
     @Test
     void testEnqueueWithMethodReference() {
         JobId jobId = BackgroundJob.<TestService>enqueue(TestService::doWork);
+        await().atMost(FIVE_SECONDS).until(() -> storageProvider.getJobById(jobId).getState() == SUCCEEDED);
+        assertThat(storageProvider.getJobById(jobId)).hasStates(ENQUEUED, PROCESSING, SUCCEEDED);
+    }
+
+    @Test
+    void testEnqueueWithInterface() {
+        JobId jobId = BackgroundJob.<TestServiceInterface>enqueue(x -> x.doWork());
+        await().atMost(FIVE_SECONDS).until(() -> storageProvider.getJobById(jobId).getState() == SUCCEEDED);
+        assertThat(storageProvider.getJobById(jobId)).hasStates(ENQUEUED, PROCESSING, SUCCEEDED);
+    }
+
+    @Test
+    void testEnqueueWithInterfaceAndMethodReference() {
+        JobId jobId = BackgroundJob.enqueue(TestServiceInterface::doWork);
         await().atMost(FIVE_SECONDS).until(() -> storageProvider.getJobById(jobId).getState() == SUCCEEDED);
         assertThat(storageProvider.getJobById(jobId)).hasStates(ENQUEUED, PROCESSING, SUCCEEDED);
     }
@@ -245,7 +259,7 @@ public class BackgroundJobByIoCJobLambdaTest {
 
     @Test
     void testRecurringCronJob() {
-        BackgroundJob.<TestService>scheduleRecurrently(everySecond, x -> x.doWork(5));
+        BackgroundJob.<TestService>scheduleRecurrently(EVERY_SECOND, x -> x.doWork(5));
         await().atMost(ofSeconds(25)).until(() -> storageProvider.countJobs(SUCCEEDED) == 1);
 
         final Job job = storageProvider.getJobList(SUCCEEDED, ascOnUpdatedAt(1000)).get(0);
@@ -254,7 +268,7 @@ public class BackgroundJobByIoCJobLambdaTest {
 
     @Test
     void testRecurringCronJobWithJobContext() {
-        BackgroundJob.<TestService>scheduleRecurrently(everySecond, x -> x.doWork(5, JobContext.Null));
+        BackgroundJob.<TestService>scheduleRecurrently(EVERY_SECOND, x -> x.doWork(5, JobContext.Null));
         await().atMost(ofSeconds(25)).until(() -> storageProvider.countJobs(SUCCEEDED) == 1);
 
         final Job job = storageProvider.getJobList(SUCCEEDED, ascOnUpdatedAt(1000)).get(0);
@@ -263,7 +277,7 @@ public class BackgroundJobByIoCJobLambdaTest {
 
     @Test
     void testRecurringCronJobWithId() {
-        BackgroundJob.<TestService>scheduleRecurrently("theId", everySecond, x -> x.doWork(5));
+        BackgroundJob.<TestService>scheduleRecurrently("theId", EVERY_SECOND, x -> x.doWork(5));
         await().atMost(ofSeconds(25)).until(() -> storageProvider.countJobs(SUCCEEDED) == 1);
 
         final Job job = storageProvider.getJobList(SUCCEEDED, ascOnUpdatedAt(1000)).get(0);
@@ -272,7 +286,7 @@ public class BackgroundJobByIoCJobLambdaTest {
 
     @Test
     void testRecurringCronJobWithIdAndTimezone() {
-        BackgroundJob.<TestService>scheduleRecurrently("theId", everySecond, systemDefault(), x -> x.doWork(5));
+        BackgroundJob.<TestService>scheduleRecurrently("theId", EVERY_SECOND, systemDefault(), x -> x.doWork(5));
         await().atMost(ofSeconds(25)).until(() -> storageProvider.countJobs(SUCCEEDED) == 1);
 
         final Job job = storageProvider.getJobList(SUCCEEDED, ascOnUpdatedAt(1000)).get(0);
@@ -306,7 +320,7 @@ public class BackgroundJobByIoCJobLambdaTest {
 
     @Test
     void recurringJobIdIsKeptEvenIfBackgroundJobServerRestarts() {
-        BackgroundJob.<TestService>scheduleRecurrently("my-job-id", everySecond, x -> x.doWorkThatTakesLong(12));
+        BackgroundJob.<TestService>scheduleRecurrently("my-job-id", EVERY_SECOND, x -> x.doWorkThatTakesLong(12));
         await().atMost(TWO_SECONDS).until(() -> storageProvider.countJobs(PROCESSING) == 1);
         final UUID jobId = storageProvider.getJobList(PROCESSING, ascOnUpdatedAt(1000)).get(0).getId();
         backgroundJobServer.stop();

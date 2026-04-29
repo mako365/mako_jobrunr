@@ -239,12 +239,12 @@ public abstract class StorageProviderTest {
 
         JobRunrMetadata metadata = new JobRunrMetadata(onChangeListener.listenForChangesOfMetadataName(), "some-owner", "some-value");
         storageProvider.saveMetadata(metadata);
-        assertThat(onChangeListener.changes).hasSize(1);
-        assertThat(onChangeListener.changes.get(0)).hasSize(1);
+        await().untilAsserted(() -> assertThat(onChangeListener.changes).hasSize(1));
+        await().untilAsserted(() -> assertThat(onChangeListener.changes.get(0)).hasSize(1));
 
         storageProvider.deleteMetadata(metadata.getName());
-        assertThat(onChangeListener.changes).hasSizeGreaterThanOrEqualTo(2);
-        assertThat(onChangeListener.changes.get(onChangeListener.changes.size() - 1)).isEmpty();
+        await().untilAsserted(() -> assertThat(onChangeListener.changes).hasSizeGreaterThanOrEqualTo(2));
+        await().untilAsserted(() -> assertThat(onChangeListener.changes.get(onChangeListener.changes.size() - 1)).isEmpty());
     }
 
     @Test
@@ -543,7 +543,7 @@ public abstract class StorageProviderTest {
         assertThat(distinctJobSignaturesForJobsInProgress)
                 .hasSize(1)
                 .containsOnly(
-                        "org.jobrunr.stubs.TestService.doWork(java.lang.Integer,java.lang.Integer)");
+                        "org.jobrunr.stubs.TestService.doWork(java.lang.Integer, java.lang.Integer)");
 
         Set<String> distinctJobSignaturesForSucceededJobs = storageProvider.getDistinctJobSignatures(SUCCEEDED);
         assertThat(distinctJobSignaturesForSucceededJobs)
@@ -933,7 +933,7 @@ public abstract class StorageProviderTest {
     @Disabled
     void testPerformance() {
         int amount = 1000000;
-        IntStream.range(0, amount)
+        var ignored = IntStream.range(0, amount)
                 .peek(i -> {
                     if (i % 10000 == 0) {
                         System.out.println("Saving job " + i);

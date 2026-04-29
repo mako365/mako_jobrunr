@@ -70,7 +70,7 @@ public class JobRunrApiHandler extends RestHttpHandler {
                 response.statusCode(404);
             } else {
                 String format = request.queryParam("format", String.class, null);
-                if ("jsonValue" .equals(format)) {
+                if ("jsonValue".equals(format)) {
                     response.fromJsonString(metadata.getValue());
                 } else {
                     response.asJson(metadata);
@@ -80,9 +80,7 @@ public class JobRunrApiHandler extends RestHttpHandler {
     }
 
     private HttpRequestHandler getProblems() {
-        return (request, response) -> {
-            response.asJson(problemsManager().getProblems());
-        };
+        return (request, response) -> response.asJson(problemsManager().getProblems());
     }
 
     private HttpRequestHandler deleteProblemByType() {

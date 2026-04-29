@@ -7,8 +7,8 @@ import org.jobrunr.server.dashboard.DashboardNotification;
 import org.jobrunr.storage.JobRunrMetadata;
 import org.jobrunr.storage.StorageProvider;
 import org.jobrunr.storage.ThreadSafeStorageProvider;
-import org.jobrunr.utils.RuntimeUtils;
 import org.jobrunr.utils.JarUtils;
+import org.jobrunr.utils.RuntimeUtils;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -47,7 +47,7 @@ public class SevereJobRunrExceptionNotificationMapper implements DashboardNotifi
                 .withBulletedLine("Is showing CpuAllocationNotification", Boolean.toString(!storageProvider.getMetadata(CpuAllocationIrregularityNotification.class.getSimpleName()).isEmpty()))
                 .withEmptyLine()
                 .withSubTitle("Background Job Servers")
-                .with(storageProvider.getBackgroundJobServers(), (server, diagnosticsBuilder) -> diagnosticsBuilder.withBulletedLine(format("BackgroundJobServer id: %s\n(workerPoolSize: %d, pollIntervalInSeconds: %d, firstHeartbeat: %s, lastHeartbeat: %s)", server.getId(), server.getWorkerPoolSize(), server.getPollIntervalInSeconds(), server.getFirstHeartbeat(), server.getLastHeartbeat())))
+                .with(storageProvider.getBackgroundJobServers(), (server, diagnosticsBuilder) -> diagnosticsBuilder.withBulletedLine(format("BackgroundJobServer id: %s%n(workerPoolSize: %d, pollIntervalInSeconds: %d, firstHeartbeat: %s, lastHeartbeat: %s)", server.getId(), server.getWorkerPoolSize(), server.getPollIntervalInSeconds(), server.getFirstHeartbeat(), server.getLastHeartbeat())))
                 .withEmptyLine()
                 .withSubTitle("Diagnostics from exception")
                 .withDiagnostics(2, notification.getDiagnostics())
