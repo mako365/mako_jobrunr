@@ -8,6 +8,8 @@ import org.jobrunr.scheduling.Schedule;
 import org.jobrunr.scheduling.ScheduleExpressionType;
 import org.jobrunr.utils.StringUtils;
 import org.jobrunr.utils.jobs.RecurringJobSortColumns;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -17,6 +19,8 @@ import java.util.List;
 import java.util.Optional;
 
 public class RecurringJob extends AbstractJob {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(RecurringJob.class);
 
     public enum CreatedBy {
         API,
@@ -101,16 +105,19 @@ public class RecurringJob extends AbstractJob {
 
         // add from inclusive
         if (from.equals(getNextRun(from.minusMillis(1)))) {
+            LOGGER.debug("Creating new job for recurring job '{}' at {}", getJobName(), from);
             jobs.add(toJob(getNextState(from, "By recurring job '" + getJobName() + "'")));
         }
 
         while (nextRun.isBefore(upTo)) {
+            LOGGER.debug("Creating next job for recurring job '{}' at {}", getJobName(), nextRun);
             jobs.add(toJob(getNextState(nextRun, "By recurring job '" + getJobName() + "'")));
             nextRun = getNextRun(nextRun);
         }
 
         if (jobs.isEmpty()) {
             Instant nextRunAtAheadOfTime = getNextRun(upTo);
+            LOGGER.debug("Creating future job for recurring job '{}' at {}", getJobName(), nextRunAtAheadOfTime);
             jobs.add(toJob(getNextState(nextRunAtAheadOfTime, "Ahead of time by recurring job '" + getJobName() + "'")));
         }
 
