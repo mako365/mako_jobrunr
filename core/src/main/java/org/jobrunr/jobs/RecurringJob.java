@@ -20,7 +20,7 @@ import java.util.Optional;
 
 public class RecurringJob extends AbstractJob {
 
-    private final Logger LOGGER = LoggerFactory.getLogger(RecurringJob.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(RecurringJob.class);
 
     public enum CreatedBy {
         API,
