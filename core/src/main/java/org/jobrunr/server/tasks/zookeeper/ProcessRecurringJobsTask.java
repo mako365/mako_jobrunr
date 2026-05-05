@@ -75,8 +75,8 @@ public class ProcessRecurringJobsTask extends AbstractJobZooKeeperTask {
 
     private List<Job> toJobsToSchedule(RecurringJob recurringJob, Instant from, Instant upUntil) {
         List<Job> jobsToSchedule = createJobsToSchedule(recurringJob, from, upUntil);
+        LOGGER.trace("Recurring job '{}' resulted in {} scheduled jobs.", recurringJob.getJobName(), jobsToSchedule.size());
         if (jobsToSchedule.isEmpty()) {
-            LOGGER.trace("Recurring job '{}' resulted in 0 scheduled jobs.", recurringJob.getJobName());
             return emptyList();
         }
 
