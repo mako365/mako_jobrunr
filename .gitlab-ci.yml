@@ -23,7 +23,7 @@ build dashboard frontend:
     - corepack enable
     - cd ${CI_PROJECT_DIR}/core/src/main/resources/org/jobrunr/dashboard/frontend
     - export NODE_OPTIONS=--openssl-legacy-provider
-  image: node:latest
+  image: node:22
   stage: build
   script:
     - yarn && yarn build
