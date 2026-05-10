@@ -12,7 +12,7 @@
 image: gradle:8-jdk21-alpine
 
 variables:
-  DRONE_TAG: "9.8.5.2" #version number
+  DRONE_TAG: "10.8.6.0" #version number
 
 before_script:
   - GRADLE_USER_HOME="$(pwd)/.gradle"
@@ -20,9 +20,10 @@ before_script:
 
 build dashboard frontend:
   before_script:
+    - corepack enable
     - cd ${CI_PROJECT_DIR}/core/src/main/resources/org/jobrunr/dashboard/frontend
     - export NODE_OPTIONS=--openssl-legacy-provider
-  image: node:latest
+  image: node:22
   stage: build
   script:
     - yarn && yarn build
