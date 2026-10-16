@@ -43,6 +43,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.util.ClassUtils;
 
 import java.time.Duration;
+import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.Collections.emptyList;
@@ -121,7 +122,7 @@ public class JobRunrAutoConfiguration {
 
         backgroundJobServerConfiguration.andBackgroundJobServerWorkerPolicy(backgroundJobServerWorkerPolicy);
 
-        map.from(backgroundJobServerProperties::getName).whenNonNull().to(backgroundJobServerConfiguration::andName);
+        map.from(backgroundJobServerProperties::getName).when(Objects::nonNull).to(backgroundJobServerConfiguration::andName);
         map.from(backgroundJobServerProperties::getPollIntervalInSeconds).to(backgroundJobServerConfiguration::andPollIntervalInSeconds);
         map.from(backgroundJobServerProperties::getServerTimeoutPollIntervalMultiplicand).to(backgroundJobServerConfiguration::andServerTimeoutPollIntervalMultiplicand);
         map.from(jobRetentionConfiguration::getDeleteSucceededJobsAfter).to(backgroundJobServerConfiguration::andDeleteSucceededJobsAfter);
@@ -135,12 +136,12 @@ public class JobRunrAutoConfiguration {
         CarbonAwareJobProcessingConfiguration carbonAwareJobProcessingConfiguration = CarbonAwareJobProcessingConfiguration.usingDisabledCarbonAwareJobProcessingConfiguration();
         JobRunrProperties.CarbonAwareJobProcessing carbonAwareJobProcessingProperties = properties.getBackgroundJobServer().getCarbonAwareJobProcessing();
         map.from(carbonAwareJobProcessingProperties::isEnabled).to(carbonAwareJobProcessingConfiguration::andCarbonAwareSchedulingEnabled);
-        map.from(carbonAwareJobProcessingProperties::getDataProvider).whenNonNull().to(carbonAwareJobProcessingConfiguration::andDataProvider);
-        map.from(carbonAwareJobProcessingProperties::getAreaCode).whenNonNull().to(carbonAwareJobProcessingConfiguration::andAreaCode);
-        map.from(carbonAwareJobProcessingProperties::getExternalCode).whenNonNull().to(carbonAwareJobProcessingConfiguration::andExternalCode);
-        map.from(carbonAwareJobProcessingProperties::getExternalIdentifier).whenNonNull().to(carbonAwareJobProcessingConfiguration::andExternalIdentifier);
-        map.from(carbonAwareJobProcessingProperties::getApiClientConnectTimeout).whenNonNull().to(carbonAwareJobProcessingConfiguration::andApiClientConnectTimeout);
-        map.from(carbonAwareJobProcessingProperties::getApiClientReadTimeout).whenNonNull().to(carbonAwareJobProcessingConfiguration::andApiClientReadTimeout);
+        map.from(carbonAwareJobProcessingProperties::getDataProvider).when(Objects::nonNull).to(carbonAwareJobProcessingConfiguration::andDataProvider);
+        map.from(carbonAwareJobProcessingProperties::getAreaCode).when(Objects::nonNull).to(carbonAwareJobProcessingConfiguration::andAreaCode);
+        map.from(carbonAwareJobProcessingProperties::getExternalCode).when(Objects::nonNull).to(carbonAwareJobProcessingConfiguration::andExternalCode);
+        map.from(carbonAwareJobProcessingProperties::getExternalIdentifier).when(Objects::nonNull).to(carbonAwareJobProcessingConfiguration::andExternalIdentifier);
+        map.from(carbonAwareJobProcessingProperties::getApiClientConnectTimeout).when(Objects::nonNull).to(carbonAwareJobProcessingConfiguration::andApiClientConnectTimeout);
+        map.from(carbonAwareJobProcessingProperties::getApiClientReadTimeout).when(Objects::nonNull).to(carbonAwareJobProcessingConfiguration::andApiClientReadTimeout);
         map.from(carbonAwareJobProcessingProperties::getPollIntervalInMinutes).to(carbonAwareJobProcessingConfiguration::andPollIntervalInMinutes);
         backgroundJobServerConfiguration.andCarbonAwareJobProcessingConfiguration(carbonAwareJobProcessingConfiguration);
 
